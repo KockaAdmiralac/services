@@ -1,0 +1,11 @@
+{
+	"interval": 30000,
+	"repo": {
+		"org": "Wikia",
+		"repo": "app"
+	},
+	"webhook": {
+		"id": "Webhook ID goes here",
+		"token": "Webhook token goes here"
+	}
+}

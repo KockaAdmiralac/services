@@ -1,0 +1,8 @@
+{
+    "client": "Your Client ID goes here",
+    "user": "gopiratesoftware",
+    "port": 53730,
+    "interval": 300000,
+    "key": null,
+    "cert": null
+}

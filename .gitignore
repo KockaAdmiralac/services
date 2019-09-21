@@ -1,0 +1,5 @@
+gopiratesoftware/keys
+gopiratesoftware/config.json
+github/cache.json
+github/config.json
+**/node_modules
