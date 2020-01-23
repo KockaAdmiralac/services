@@ -1,0 +1,12 @@
+{
+    "petlja": {
+        "username": "Petlja username",
+        "password": "Petlja password"
+    },
+    "discord": {
+        "id": "Discord webhook ID",
+        "token": "Discord webhook token"
+    },
+    "slack": "Slack webhook URL",
+    "interval": 30000
+}

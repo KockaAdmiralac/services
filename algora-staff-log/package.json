@@ -1,0 +1,29 @@
+{
+    "name": "algora-staff-log",
+    "version": "0.0.1",
+    "description": "Logs staff action logs on Algora to Discord and Slack.",
+    "keywords": [
+        "petlja",
+        "discord",
+        "slack"
+    ],
+    "license": "MIT",
+    "author": {
+        "name": "KockaAdmiralac",
+        "email": "git@kocka.tech",
+        "url": "https://kocka.tech"
+    },
+    "main": "main.js",
+    "scripts": {
+        "start": "node main.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/KockaAdmiralac/services.git"
+    },
+    "dependencies": {
+        "@slack/webhook": ">=5.0.2",
+        "discord.js": ">=11.5.1",
+        "petlja": ">=0.1.3"
+    }
+}
