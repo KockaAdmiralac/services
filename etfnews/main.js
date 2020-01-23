@@ -9,7 +9,8 @@ const fs = require('fs'),
       h2m = require('h2m'),
       webhook = new WebhookClient(discord.id, discord.token);
 
-let results = null;
+let results = null,
+    counter = 0;
 
 function fetch() {
     const date = Date.now();
@@ -37,6 +38,9 @@ async function refresh() {
                 let relay = false;
                 if (lineDiff < -5) {
                     // Large content removal.
+                    if (--counter === -3) {
+                        relay = 'Prevelike izmene, ne može se generisati pregled. (-)';
+                    }
                     console.info(new Date(), `Server at ${pages[i].url} returned an empty page, ignoring.`);
                 } else if (lineDiff < 5) {
                     // Small content addition or removal.
@@ -50,7 +54,7 @@ async function refresh() {
                         )
                         .join('\n');
                     relay = `\`\`\`diff\n${changedContent}\`\`\``;
-                } else if (lineDiff < 50) {
+                } else if (lineDiff < 30) {
                     // Medium content addition.
                     const addedContent = diffLines(results[i], res[i])
                         .filter(change => change.added)
@@ -59,10 +63,13 @@ async function refresh() {
                     relay = h2m(addedContent);
                 } else {
                     // Large content addition.
-                    relay = 'Promene prevelike, ne može se generisati pregled.';
+                    if (++counter === 3) {
+                        relay = 'Prevelike izmene, ne može se generisati pregled. (+)';
+                    }
+                    console.log(new Date(), `Server at ${pages[i].url} added a large amount of content.`);
                 }
-                console.debug('Description to relay:', relay);
                 if (typeof relay === 'string') {
+                    counter = 0;
                     await fs.promises.writeFile(`hist/${pages[i].key}/${Date.now()}.html`, res[i]);
                     const url = new URL(pages[i].url);
                     url.search = new URLSearchParams(pages[i].qs);
