@@ -10,7 +10,7 @@ const fs = require('fs'),
       webhook = new WebhookClient(discord.id, discord.token);
 
 let results = null,
-    counter = 0;
+    counter = {};
 
 function fetch() {
     const date = Date.now();
@@ -33,12 +33,15 @@ async function refresh() {
     try {
         const res = await fetch();
         for (let i = 0; i < res.length; ++i) {
+            if (!counter[i]) {
+                counter[i] = 0;
+            }
             if (md5(results[i]) !== md5(res[i])) {
                 const lineDiff = results[i].split('\n').length - res[i].split('\n').length;
                 let relay = false;
                 if (lineDiff < -5) {
                     // Large content removal.
-                    if (--counter === -3) {
+                    if (--counter[i] === -5) {
                         relay = 'Prevelike izmene, ne može se generisati pregled. (-)';
                     }
                     console.info(new Date(), `Server at ${pages[i].url} returned an empty page, ignoring.`);
@@ -53,7 +56,11 @@ async function refresh() {
                             .join('\n')
                         )
                         .join('\n');
-                    relay = `\`\`\`diff\n${changedContent}\`\`\``;
+                    if (changedContent.trim().length) {
+                        relay = `\`\`\`diff\n${changedContent}\`\`\``;
+                    } else {
+                        console.debug(new Date(), 'But the changes weren\'t there.');
+                    }
                 } else if (lineDiff < 30) {
                     // Medium content addition.
                     const addedContent = diffLines(results[i], res[i])
@@ -63,13 +70,13 @@ async function refresh() {
                     relay = h2m(addedContent);
                 } else {
                     // Large content addition.
-                    if (++counter === 3) {
+                    if (++counter[i] === 5) {
                         relay = 'Prevelike izmene, ne može se generisati pregled. (+)';
                     }
                     console.log(new Date(), `Server at ${pages[i].url} added a large amount of content.`);
                 }
                 if (typeof relay === 'string') {
-                    counter = 0;
+                    counter[i] = 0;
                     await fs.promises.writeFile(`hist/${pages[i].key}/${Date.now()}.html`, res[i]);
                     const url = new URL(pages[i].url);
                     url.search = new URLSearchParams(pages[i].qs);
@@ -98,6 +105,8 @@ async function refresh() {
                 console.error(new Date(), 'Connection refused on', error.options.uri);
             } else if (error.cause.errno === 'ECONNRESET') {
                 console.error(new Date(), 'Connection reset on', error.options.uri);
+            } else if (error.cause.errno === 'EHOSTUNREACH') {
+                console.error(new Date(), 'Host at', error.options.uri, 'is unreachable');
             } else {
                 console.error(new Date(), 'Unknown request error:', error);
             }
