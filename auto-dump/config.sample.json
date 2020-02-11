@@ -1,0 +1,8 @@
+{
+    "username": "Fandom username",
+    "password": "Fandom password",
+    "wikis": [
+        "community.fandom.com",
+        "dev.fandom.com"
+    ]
+}

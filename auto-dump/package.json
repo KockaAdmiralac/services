@@ -1,0 +1,26 @@
+{
+    "name": "auto-dump",
+    "version": "1.0.1",
+    "description": "Periodically requests database dumps on configured Fandom wikis.",
+    "keywords": [
+        "fandom"
+    ],
+    "license": "MIT",
+    "author": {
+        "name": "KockaAdmiralac",
+        "email": "git@kocka.tech",
+        "url": "https://kocka.tech"
+    },
+    "main": "main.js",
+    "scripts": {
+        "start": "node main.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/KockaAdmiralac/services.git"
+    },
+    "dependencies": {
+        "request": ">=2.88.0",
+        "request-promise-native": ">=1.0.8"
+    }
+}
