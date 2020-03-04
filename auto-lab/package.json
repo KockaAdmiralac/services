@@ -1,0 +1,29 @@
+{
+    "name": "auto-lab",
+    "version": "0.0.1",
+    "description": "Automatically enrolls to lab practices on RTI.",
+    "keywords": [
+        "etf"
+    ],
+    "license": "MIT",
+    "author": {
+        "name": "KockaAdmiralac",
+        "email": "git@kocka.tech",
+        "url": "https://kocka.tech"
+    },
+    "main": "main.js",
+    "scripts": {
+        "start": "node --tls-min-v1.0 main.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/KockaAdmiralac/services.git"
+    },
+    "dependencies": {
+        "discord.js": ">=12.0.1",
+        "form-data": ">=3.0.0",
+        "got": ">=10.6.0",
+        "node-html-parser": ">=1.2.8",
+        "tough-cookie": ">=3.0.1"
+    }
+}

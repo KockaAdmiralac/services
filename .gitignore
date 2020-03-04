@@ -1,5 +1,6 @@
 etfnews/hist
 gopiratesoftware/keys
 github/cache.json
+**/cache.json
 **/config.json
 **/node_modules

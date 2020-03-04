@@ -1,0 +1,12 @@
+{
+    "autoSignupRegex": "^PKR_.*",
+    "discord": {
+        "id": "Webhook ID",
+        "token": "Webhook token"
+    },
+    "etf": {
+        "username": "ETF username",
+        "password": "ETF password"
+    },
+    "interval": 30000
+}

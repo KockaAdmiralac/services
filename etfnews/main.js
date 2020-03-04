@@ -21,7 +21,7 @@ function fetch() {
         },
         transform: res => res
             .replace(new RegExp(date, 'g'), '')
-            .replace(/<!--(.*?)-->/g, '')
+            .replace(/<!--(.*?)-->/gs, '')
             .split('\n')
             .map(line => line.trim())
             .filter(Boolean)
