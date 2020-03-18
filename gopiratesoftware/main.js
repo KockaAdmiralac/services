@@ -11,9 +11,10 @@
 const express = require('express'),
       parser = require('body-parser'),
       https = require('https'),
-      http = require('request-promise-native'),
+      got = require('got'),
       fsPromises = require('fs').promises,
-      config = require('./config.json');
+      config = require('./config.json'),
+      pkg = require('./package.json');
 
 /**
  * Service class.
@@ -26,6 +27,16 @@ class GoPirateSoftware {
         this._initConfig();
         this._initServer();
         this._online = null;
+        this._client = got.extend({
+            headers: {
+                'Client-ID': this._config.client,
+                //'User-Agent': `${pkg.name} v${pkg.version}: ${pkg.repository.url}`
+            },
+            method: 'GET',
+            prefixUrl: 'https://api.twitch.tv',
+            resolveBodyOnly: true,
+            responseType: 'json'
+        });
         process.on('SIGINT', this._kill.bind(this));
     }
     /**
@@ -95,17 +106,11 @@ class GoPirateSoftware {
      */
     async _check() {
         try {
-            const data = await http({
-                headers: {
-                    'Client-ID': this._config.client
-                },
-                json: true,
-                method: 'GET',
-                qs: {
+            const data = await this._client('helix/streams', {
+                searchParams: {
                     cb: Date.now(),
                     user_login: this._config.user
-                },
-                uri: 'https://api.twitch.tv/helix/streams'
+                }
             });
             if (
                 typeof data === 'object' &&
@@ -118,7 +123,15 @@ class GoPirateSoftware {
                 this._online = null;
             }
         } catch (error) {
-            console.error(error);
+            if (error && error.response && error.response.statusCode) {
+                if (error.response.statusCode === 503) {
+                    console.error(new Date(), 'Twitch API server error.');
+                } else {
+                    console.error(new Date(), 'Unknown request error:', error);
+                }
+            } else {
+                console.error(new Date(), 'Unknown error:', error);
+            }
         }
     }
     /**

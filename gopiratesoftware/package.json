@@ -1,7 +1,7 @@
 {
     "name": "gopiratesoftware",
-    "version": "1.0.0",
-    "description": "Web server that tells whether a stream is online.",
+    "version": "1.0.1",
+    "description": "Web service that reports whether a Twitch stream is online.",
     "keywords": [
         "wikia",
         "fandom",
@@ -12,7 +12,7 @@
     "author": {
         "name": "KockaAdmiralac",
         "email": "git@kocka.tech",
-        "url": "https://github.com/KockaAdmiralac"
+        "url": "https://kocka.tech"
     },
     "main": "main.js",
     "scripts": {
@@ -23,12 +23,11 @@
         "url": "https://github.com/KockaAdmiralac/services.git"
     },
     "dependencies": {
-        "request-promise-native": ">=1.0.7",
-        "request": ">=2.88.0",
+        "body-parser": ">=1.19.0",
         "express": ">=4.17.1",
-        "body-parser": ">=1.19.0"
+        "got": ">=10.6.0"
     },
     "devDependencies": {
-        "eslint": ">=4.19.1"
+        "eslint": ">=6.8.0"
     }
 }
