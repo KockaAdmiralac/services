@@ -28,8 +28,8 @@ const http = got.extend({
     prefixUrl: 'https://rti.etf.bg.ac.rs/labvezbe',
     resolveBodyOnly: true,
     retry: 0
-}), regex = new RegExp(autoSignupRegex, 'u'),
-    webhook = new WebhookClient(discord.id, discord.token);
+}), regex = autoSignupRegex ? new RegExp(autoSignupRegex, 'u') : null,
+    webhook = discord ? new WebhookClient(discord.id, discord.token) : null;
 let cache = null;
 
 /**
@@ -115,21 +115,29 @@ async function recordLab(name) {
         console.info(new Date(), 'Recording lab', name);
         cache.add(name);
         await saveCache();
-        await webhook.send(`New lab: [${name.replace(/_/g, ' ')}](<https://rti.etf.bg.ac.rs/labvezbe/?servis=${encodeURIComponent(name)}>)`);
-        if (regex.exec(name)) {
-            await webhook.send('Attempting automatic signup...');
+        if (webhook) {
+            await webhook.send(`New lab: [${name.replace(/_/g, ' ')}](<https://rti.etf.bg.ac.rs/labvezbe/?servis=${encodeURIComponent(name)}>)`);
+        }
+        if (regex && regex.exec(name)) {
+            if (webhook) {
+                await webhook.send('Attempting automatic signup...');
+            }
             await login();
             const availableTerm = await getTerms(name);
             if (availableTerm) {
                 await signup(name, availableTerm);
-                await webhook.send('Signup successful!');
-            } else {
+                if (webhook) {
+                    await webhook.send('Signup successful!');
+                }
+            } else if (webhook) {
                 await webhook.send('No available terms to sign up for!');
             }
         }
     } catch (error) {
         console.error(new Date(), 'An error occurred while recording lab:', error);
-        webhook.send('An error occurred while recording lab!');
+        if (webhook) {
+            webhook.send('An error occurred while recording lab!');
+        }
     }
 }
 

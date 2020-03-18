@@ -1,6 +1,6 @@
 {
     "name": "auto-lab",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "description": "Automatically enrolls to lab practices on RTI.",
     "keywords": [
         "etf"
@@ -13,7 +13,7 @@
     },
     "main": "main.js",
     "scripts": {
-        "start": "node --tls-min-v1.0 main.js"
+        "start": "node --tls-min-v1.0 --tls-cipher-list=\"AES128-SHA\" main.js"
     },
     "repository": {
         "type": "git",
