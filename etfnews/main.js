@@ -107,6 +107,8 @@ async function refresh() {
                 console.error(new Date(), 'Connection reset on', error.options.uri);
             } else if (error.cause.errno === 'EHOSTUNREACH') {
                 console.error(new Date(), 'Host at', error.options.uri, 'is unreachable');
+            } else if (error.cause.errno === 'ETIMEDOUT') {
+                console.error(new Date(), 'Connection timed out on', error.options.uri);
             } else {
                 console.error(new Date(), 'Unknown request error:', error);
             }
