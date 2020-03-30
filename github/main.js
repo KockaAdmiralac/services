@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * GitHub-Discord
  * 	A better view at what Wikia is doing through the lense of Discord

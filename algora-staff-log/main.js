@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const {Client} = require('petlja'),
       {WebhookClient} = require('discord.js'),
       config = require('./config.json'),
