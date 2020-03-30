@@ -153,11 +153,26 @@ async function refresh() {
                 .map(recordLab)
         );
     } catch (error) {
-        console.error(
-            new Date(),
-            'An error occurred while refreshing service list',
-            error
-        );
+        if (error.name === 'RequestError') {
+            if (error.code === 'ETIMEDOUT') {
+                console.error(
+                    new Date(),
+                    'Timed out while refreshing services list'
+                );
+            } else {
+                console.error(
+                    new Date(),
+                    'Unknown request error:',
+                    error
+                );
+            }
+        } else {
+            console.error(
+                new Date(),
+                'An error occurred while refreshing service list:',
+                error
+            );
+        }
     }
 }
 

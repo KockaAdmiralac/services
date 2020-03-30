@@ -102,13 +102,13 @@ async function refresh() {
         }
     } catch (error) {
         if (error && error.name === 'RequestError' && error.cause) {
-            if (error.cause.errno === 'ECONNREFUSED') {
+            if (error.cause.code === 'ECONNREFUSED') {
                 console.error(new Date(), 'Connection refused on', error.options.uri);
-            } else if (error.cause.errno === 'ECONNRESET') {
+            } else if (error.cause.code === 'ECONNRESET') {
                 console.error(new Date(), 'Connection reset on', error.options.uri);
-            } else if (error.cause.errno === 'EHOSTUNREACH') {
+            } else if (error.cause.code === 'EHOSTUNREACH') {
                 console.error(new Date(), 'Host at', error.options.uri, 'is unreachable');
-            } else if (error.cause.errno === 'ETIMEDOUT') {
+            } else if (error.cause.code === 'ETIMEDOUT') {
                 console.error(new Date(), 'Connection timed out on', error.options.uri);
             } else {
                 console.error(new Date(), 'Unknown request error:', error);
