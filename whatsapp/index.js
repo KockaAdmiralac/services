@@ -88,7 +88,7 @@ class WhatsAppDiscord {
         await this.page.click('#main > header > div[role="button"]');
         try {
             // eslint-disable-next-line max-len
-            await this.page.click('#app > div > div > div > div > span > div > span > div > div > span[data-icon="down"]');
+            await this.page.click('#app > div > div > div > div > span > div > span > div > div span[data-icon="down"]');
         } catch (error) {
             // There is no user list to expand.
         }
