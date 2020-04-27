@@ -255,7 +255,7 @@
         ],
         "no-array-constructor": "error",
         "no-bitwise": "off",
-        "no-continue": "error",
+        "no-continue": "off",
         "no-inline-comments": "error",
         "no-lonely-if": "error",
         "no-mixed-operators": "error",

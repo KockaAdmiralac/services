@@ -1,5 +1,10 @@
 {
-    "id": "Discord webhook ID",
-    "token": "Discord webhook token",
-    "group": "WhatsApp group name"
+    "groups": [
+        {
+            "groupId": "number-foundingTimestamp@g.us",
+            "webhookId": "Discord webhook ID",
+            "webhookToken": "Discord webhook token",
+            "callNumber": "Default call number"
+        }
+    ]
 }

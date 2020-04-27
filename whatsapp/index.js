@@ -9,20 +9,34 @@
  * Importing modules.
  */
 const fs = require('fs'),
-      url = require('url'),
       {WebhookClient} = require('discord.js'),
       FileType = require('file-type'),
-      h2m = require('h2m'),
-      puppeteer = require('puppeteer'),
+      {Client} = require('whatsapp-web.js'),
+      qrcode = require('qrcode-terminal'),
       config = require('./config.json');
 
 /**
  * Constants.
  */
-// eslint-disable-next-line max-len
-const USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4115.5 Safari/537.36';
-
-/* eslint-disable max-statements */
+const EVENTS = [
+    'auth_failure',
+    'authenticated',
+    'change_battery',
+    'change_state',
+    'disconnected',
+    'error',
+    'group_join',
+    'group_leave',
+    'group_update',
+    // 'media_uploaded',
+    'message',
+    'message_ack',
+    // 'message_create',
+    'message_revoke_everyone',
+    // 'message_revoke_me',
+    'qr',
+    'ready'
+];
 
 /**
  * Main class.
@@ -32,385 +46,358 @@ class WhatsAppDiscord {
      * Class constructor.
      */
     constructor() {
-        this.avatars = {};
-        this.webhook = new WebhookClient(config.id, config.token);
-        this.h2mOpts = {
-            overides: {
-                code: this.codeOverride,
-                img: this.imgOverride
+        this.initWebhooks();
+        this.initCache();
+        this.initClient();
+    }
+    /**
+     * Initializes Discord webhook clients for each group.
+     */
+    initWebhooks() {
+        for (const group of config.groups) {
+            group.webhook = new WebhookClient(
+                group.webhookId,
+                group.webhookToken
+            );
+        }
+    }
+    /**
+     * Initializes message cache.
+     */
+    initCache() {
+        try {
+            this.cache = require('./cache.json');
+        } catch (error) {
+            this.cache = {};
+        }
+        this.cacheInterval = setInterval(this.saveCache.bind(this), 5000);
+    }
+    /**
+     * Initializes the WhatsApp Web client.
+     */
+    initClient() {
+        this.client = new Client();
+        for (const event of EVENTS) {
+            this.client.on(event, this[
+                event.replace(/_(\w)/g, (_, letter) => letter.toUpperCase())
+            ].bind(this));
+        }
+    }
+    /**
+     * Emitted when there has been an error while trying to restore an
+     * existing session.
+     * @param {string} message ?
+     */
+    authFailure(message) {
+        console.error(new Date(), 'AUTHENTICATION FAILURE:', message);
+    }
+    /**
+     * Emitted when authentication is successful.
+     * @param {object} session Object containing session information.
+     */
+    authenticated(session) {
+        console.info(new Date(), 'Authenticated to WhatsApp:', session);
+    }
+    /**
+     * Emitted when the battery percentage for the attached device changes.
+     * @param {object} batteryInfo See documentation
+     */
+    changeBattery(batteryInfo) {
+        console.info(new Date(), 'Battery percentage changed:', batteryInfo);
+    }
+    /**
+     * Emitted when the connection state changes.
+     * @param {WAState} state The new connection state
+     */
+    changeState(state) {
+        switch (state) {
+            case 'CONFLICT':
+                console.error(
+                    new Date(),
+                    'Conflicting with another client!'
+                );
+                break;
+            case 'CONNECTED':
+                console.info(new Date(), 'Reconnected.');
+                break;
+            case 'DEPRECATED_VERSION':
+                console.error(
+                    new Date(),
+                    'We\'re using a deprecated version of WhatsApp Web!'
+                );
+                break;
+            case 'OPENING':
+                console.info(new Date(), 'Reconnecting...');
+                break;
+            case 'PAIRING':
+                console.info(new Date(), 'Pairing...');
+                break;
+            case 'PROXYBLOCK':
+                console.error(new Date(), 'Our proxy has been blocked!');
+                break;
+            case 'SMB_TOS_BLOCK':
+            case 'TOS_BLOCK':
+                console.error(new Date(), 'WhatsApp has blocked us!');
+                break;
+            case 'TIMEOUT':
+                console.error(new Date(), 'A timeout occurred.');
+                break;
+            case 'UNLAUNCHED':
+            case 'UNPAIRED':
+            case 'UNPAIRED_IDLE':
+            default:
+                console.error(new Date(), 'Unknown state:', state);
+                break;
+        }
+    }
+    /**
+     * Emitted when the client has been disconnected.
+     * @param {WAState} reason State that caused the disconnect
+     */
+    disconnected(reason) {
+        console.error(new Date(), 'DISCONNECTED:', reason);
+    }
+    /**
+     * An error occurred. This event is emitted by every EventEmitter.
+     * @param {Error} error The error that occurred
+     */
+    error(error) {
+        console.info(new Date(), 'Unknown error:', error);
+    }
+    /**
+     * Emitted when a user joins the chat via invite link or is added by an
+     * admin.
+     * @param {GroupNotification} notification Notification about the action
+     */
+    groupJoin(notification) {
+        console.info(
+            new Date(notification.timestamp),
+            notification.author,
+            'added you to',
+            notification.chatId
+        );
+    }
+    /**
+     * Emitted when a user leaves the chat or is removed by an admin.
+     * @param {GroupNotification} notification Notification about the action
+     */
+    groupLeave(notification) {
+        console.info(
+            new Date(notification.timestamp),
+            notification.author,
+            'removed you from',
+            notification.chatId
+        );
+    }
+    /**
+     * Emitted when group settings are updated, such as subject,
+     * description or picture.
+     * @param {GroupNotification} notification Notification about the action
+     */
+    groupUpdate(notification) {
+        console.info(
+            new Date(notification.timestamp),
+            notification.author,
+            'updated',
+            notification.chatId,
+            ':',
+            notification.type
+        );
+    }
+    /**
+     * Emitted when a new message is received.
+     * @param {Message} message The message that was received
+     */
+    async message(message) {
+        if (message.fromMe) {
+            return;
+        }
+        for (const group of config.groups) {
+            if (group.groupId && message.from !== group.groupId) {
+                continue;
             }
-        };
-        this.userListReads = 50;
-        this.userListInterval = null;
+            const contact = await message.getContact(),
+                  options = {
+                      allowedMentions: {
+                          parse: ['roles', 'users']
+                      },
+                      avatarURL: await contact.getProfilePicUrl(),
+                      username: this.formatUsername(
+                          contact.pushname,
+                          contact.number,
+                          group.callNumber
+                      )
+                  };
+            if (message.hasQuotedMsg) {
+                const quoted = await message.getQuotedMessage(),
+                      quotedContact = await quoted.getContact();
+                await group.webhook.send('', {
+                    ...options,
+                    embeds: [{
+                        description: this.getQuotedMessageContents(
+                            quoted,
+                            group
+                        ),
+                        title: this.formatUsername(
+                            quotedContact.pushname,
+                            quotedContact.number,
+                            group.callNumber
+                        )
+                    }]
+                });
+            }
+            if (message.hasMedia) {
+                const media = await message.downloadMedia(),
+                    buffer = Buffer.from(media.data, 'base64'),
+                    type = await FileType.fromBuffer(buffer);
+                options.files = [{
+                    attachment: buffer,
+                    name: media.filename ?
+                        media.filename :
+                        type ?
+                            `attachment.${type.ext}` :
+                            'unknown'
+                }];
+            }
+            if (message.hasMedia || message.body) {
+                const msg = await group.webhook.send(message.body, options);
+                if (msg.id) {
+                    this.cache[message.id.id] = msg.id;
+                }
+            }
+            break;
+        }
+    }
+    /**
+     * Emitted when an ack event occurrs on message type.
+     * @param {Message} message The message that was affected
+     * @param {MessageAck} ack The new ACK value
+     */
+    messageAck(message, ack) {
+        console.info(
+            new Date(),
+            'Message',
+            message.id.id,
+            'in',
+            message.from,
+            'had its ACK status changed to',
+            ack
+        );
+    }
+    /**
+     * Emitted when a message is deleted for everyone in the chat.
+     * @param {Message} revokedMessage Message that was revoked
+     * @param {Message} oldMessage Old message data (can be null)
+     */
+    messageRevokeEveryone(revokedMessage, oldMessage) {
+        if (oldMessage) {
+            console.info(
+                new Date(),
+                'Message',
+                oldMessage.id.id,
+                'in',
+                oldMessage.from,
+                'was deleted.'
+            );
+        } else {
+            console.info(
+                new Date(),
+                'Message',
+                revokedMessage.id.id,
+                'in',
+                revokedMessage.from,
+                'was deleted.'
+            );
+        }
+    }
+    /**
+     * Emitted when the QR code is received.
+     * @param {string} qr QR code
+     */
+    qr(qr) {
+        console.info(new Date(), 'QR code received.');
+        qrcode.generate(qr, {
+            small: true
+        });
+    }
+    /**
+     * Emitted when the client has initialized and is ready to receive
+     * messages.
+     */
+    ready() {
+        console.info(new Date(), 'The client is ready!');
     }
     /**
      * Initializes the relay.
      */
-    async run() {
-        console.info('Starting browser...');
-        this.browser = await puppeteer.launch();
-        this.page = await this.browser.newPage();
-        await this.page.setUserAgent(USER_AGENT);
-        await this.page.setViewport({
-            height: 1080,
-            width: 1920
-        });
-        console.info('Visiting the site...');
-        await this.page.goto('https://web.whatsapp.com');
-        await this.page.waitFor(10000);
-        console.info('QR Code ready.');
-        await this.page.screenshot({path: 'qr.png'});
-        await this.page.waitForSelector('.app.two');
-        console.info('App has loaded.');
-        const handles = await this.page
-            .$$('#pane-side > div > div > div > div');
-        for (const handle of handles) {
-            const groupName = await handle
-                .$eval('span[title]', node => node.textContent);
-            if (groupName === config.group) {
-                await handle.click();
-                break;
-            }
-        }
-        await this.scrollToBottom();
-        await this.page.waitFor(3000);
-        try {
-            const ids = await this.page.$$('.message-in > div[data-id]');
-            this.lastId = await ids[ids.length - 1]
-                .evaluate(node => node.dataset.id);
-        } catch (error) {
-            console.error('Failed to find last ID:', error);
-            this.lastId = null;
-        }
-        this.lastNumber = null;
-        this.lastName = null;
-        await this.page.screenshot({path: 'page.png'});
-        await this.page.click('#main > header > div[role="button"]');
-        try {
-            // eslint-disable-next-line max-len
-            await this.page.click('#app > div > div > div > div > span > div > span > div > div span[data-icon="down"]');
-        } catch (error) {
-            // There is no user list to expand.
-        }
-        this.userListHandle = await this.page
-            .$('#app > div > div > div > div > span > div > span > div > div');
-        console.info('Intervals set.');
-        this.refreshInterval = setInterval(this.safeInterval.bind(this), 3000);
-        this.userListInterval = setInterval(
-            this.userListScroll.bind(this),
-            3000
-        );
-        await fs.promises.unlink('qr.png');
-    }
-    /**
-     * Checks for new messages and relays them.
-     */
-    async refresh() {
-        await this.scrollToBottom();
-        const messageHandles = await this.page.$$('.message-in');
-        const unreadHandles = [];
-        let newLastId = null;
-        for (let i = messageHandles.length - 1; i >= 0; --i) {
-            const id = await messageHandles[i]
-                .$eval('div[data-id]', node => node.dataset.id);
-            if (i === messageHandles.length - 1) {
-                newLastId = id;
-            }
-            if (id === this.lastId) {
-                break;
-            } else {
-                unreadHandles.unshift(messageHandles[i]);
-            }
-        }
-        const messages = [];
-        for (const handle of unreadHandles) {
-            const message = {};
-            // Name
-            message.name = await handle.$eval(
-                'div > div > div > div > span[dir="auto"]',
-                node => node.textContent
-            );
-            const spl = message.name.split(':');
-            if (spl && !isNaN(Number(spl[0])) && !isNaN(Number(spl[1]))) {
-                message.name = this.lastName;
-            } else {
-                this.lastName = message.name;
-            }
-            try {
-                // Phone number
-                message.number = await handle.$eval(
-                    'div > div > div > div > span[role="button"]',
-                    node => node.textContent
-                );
-                this.lastNumber = message.number;
-            } catch (error) {
-                message.number = this.lastNumber;
-            }
-            try {
-                // Text
-                message.text = h2m(await handle.$eval(
-                    'div > div > div > div > div span > span',
-                    node => node.innerHTML
-                ), this.h2mOpts);
-            } catch (error) {
-                message.text = '';
-            }
-            try {
-                // Image
-                message.image = {};
-                message.image.contents = Buffer.from(
-                    await handle.$eval(
-                        'div > div > div > div > div > img',
-                        node => new Promise(async function(resolve, reject) {
-                            const response = await fetch(node.src),
-                                  data = await response.blob(),
-                                  reader = new FileReader();
-                            reader.readAsBinaryString(data);
-                            reader.addEventListener(
-                                'load',
-                                () => resolve(reader.result)
-                            );
-                            reader.addEventListener('error', reject);
-                        })
-                    ),
-                    'binary'
-                );
-                message.image.type = await FileType
-                    .fromBuffer(message.image.contents);
-            } catch (error) {
-                message.image = null;
-            }
-            try {
-                // File
-                message.file = await handle.$eval(
-                    'div > div > div > a > div > div > span[dir="auto"]',
-                    node => node.textContent
-                );
-            } catch (error) {
-                message.file = null;
-            }
-            try {
-                // eslint-disable-next-line max-len
-                const quote = await handle.$$('.message-in > div > div > div > div > div > div > div > div > div > div');
-                if (quote && quote.length === 2) {
-                    message.quote = {};
-                    message.quote.text = h2m(
-                        await (
-                            await quote[1].getProperty('innerHTML')
-                        ).jsonValue(),
-                        this.h2mOpts
-                    );
-                    const spans = await quote[0].$$('span');
-                    if (spans && spans.length === 2) {
-                        message.quote.number = await (
-                            await spans[0].getProperty('textContent')
-                        ).jsonValue();
-                        message.quote.name = await (
-                            await spans[1].getProperty('textContent')
-                        ).jsonValue();
-                    } else if (spans && spans.length === 1) {
-                        message.quote.name = await (
-                            await spans[0].getProperty('textContent')
-                        ).jsonValue();
-                    }
-                } else {
-                    message.quote = null;
-                }
-            } catch (error) {
-                console.log(error);
-                message.quote = null;
-            }
-            messages.push(message);
-        }
-        for (const message of messages) {
-            const username = this.formatUsername(message.name, message.number),
-                  avatarURL = this.avatars[message.number],
-                  allowedMentions = {
-                      parse: ['roles', 'users']
-                  };
-            if (message.quote) {
-                await this.webhook.send('', {
-                    allowedMentions,
-                    avatarURL,
-                    embeds: [{
-                        description: message.quote.text,
-                        title: this.formatUsername(
-                            message.quote.name,
-                            message.quote.number
-                        )
-                    }],
-                    username
-                });
-            }
-            if (message.text) {
-                const options = {
-                    allowedMentions,
-                    avatarURL,
-                    username
-                };
-                if (message.image) {
-                    options.files = [{
-                        attachment: message.image.contents,
-                        name: `attachment.${message.image.type.ext}`
-                    }];
-                    options.file = message.image.contents;
-                }
-                await this.webhook.send(message.text, options);
-            }
-            if (message.file) {
-                await this.webhook.send(`*Poslao ${message.file}*.`, {
-                    allowedMentions,
-                    avatarURL,
-                    username
-                });
-            }
-        }
-        this.lastId = newLastId;
-        await this.page.screenshot({path: 'page.png'});
-    }
-    /**
-     * Scrolls through the user list to grab all avatars.
-     */
-    async userListScroll() {
-        if (--this.userListReads === 0) {
-            clearInterval(this.userListInterval);
-            this.userListInterval = null;
-            console.info('All avatars added.');
-            return;
-        }
-        const members = await this.userListHandle
-            .$$('div > div:nth-child(5) > div:nth-child(2) > div > div');
-        for (const member of members) {
-            const phone = (await member.$eval(
-                'span[dir="auto"]',
-                node => node.textContent
-            )).trim();
-            try {
-                const avatar = url.parse(await member.$eval(
-                    'img',
-                    img => img.src
-                ), true).query.e;
-                if (!this.avatars[phone]) {
-                    console.log('Adding avatar for', phone, avatar);
-                    this.avatars[phone] = avatar;
-                } else if (this.avatars[phone] !== avatar) {
-                    console.log(
-                        'Updating avatar for',
-                        phone,
-                        'from',
-                        this.avatars[phone],
-                        'to',
-                        avatar
-                    );
-                    this.avatars[phone] = avatar;
-                }
-            } catch (error) {
-                // Cannot find avatar.
-            }
-        }
-        await this.userListHandle.evaluate(ul => ul.scrollBy(0, 250));
-    }
-    /**
-     * Executes the refresh interval safely. Only one refresh interval may be
-     * executing at a time and it must not throw errors.
-     */
-    async safeInterval() {
-        if (this.intervalExecuting) {
-            return;
-        }
-        this.intervalExecuting = true;
-        try {
-            await this.refresh();
-        } catch (error) {
-            console.error('Error in interval:', error);
-        }
-        this.intervalExecuting = false;
-    }
-    /**
-     * Overrides the <code> tag in the HTML -> Markdown conversion.
-     * @param {object} node Node data
-     * @returns {string} Markdown-formatted code-block
-     */
-    codeOverride(node) {
-        console.log(node);
-        return `\`\`\`${node.md}\`\`\``;
-    }
-    /**
-     * Overrides the <img> tag in the HTML -> Markdown conversion.
-     * @param {object} node Node data
-     * @returns {string} Markdown-formatted image
-     */
-    imgOverride(node) {
-        if (
-            node &&
-            node.attrs &&
-            (
-                node.attrs['data-plain-text'] ||
-                node.attrs.alt
-            )
-        ) {
-            return node.attrs['data-plain-text'] || node.attrs.alt;
-        }
-        return '';
-    }
-    /**
-     * Scrolls the page to the bottom if it wasn't already.
-     */
-    async scrollToBottom() {
-        try {
-            await this.page.$eval(
-                '#main > div > div > span > div',
-                node => node.click()
-            );
-        } catch (error) {
-            // Already scrolled to bottom.
-        }
+    run() {
+        this.client.initialize();
     }
     /**
      * Formats a valid Discord webhook username so that it doesn't exceed 32
      * characters.
      * @param {string} name User's name
      * @param {string} number User's phone number
+     * @param {string} callNumber Default call number
      * @returns {string} Discord webhook username of valid length
      */
-    formatUsername(name, number) {
-        if (!name && !number) {
-            return 'Nepoznato';
-        } else if (!name) {
-            if (number.length > 32) {
-                return `${number.slice(0, 31)}…`;
+    formatUsername(name, number, callNumber) {
+        const normalizedNumber = callNumber && number.startsWith(callNumber) ?
+            `0${number.slice(callNumber.length)}` :
+            `+${number}`;
+        if (!name) {
+            if (normalizedNumber.length > 32) {
+                return `${normalizedNumber.slice(0, 31)}…`;
             }
-            return number;
-        } else if (!number) {
-            if (name.length > 32) {
-                return `${name.slice(0, 31)}…`;
-            }
-            return name;
+            return normalizedNumber;
         }
         if (name.length > 32) {
             return `${name.slice(0, 31)}…`;
-        } else if (name.length + 9 > 32) {
-            // Minimum: Name Surname (+381 *)
+        } else if (name.length + 5 > 32) {
+            // Minimum: Name Surname (0*)
             return name;
-        } else if (name.length + number.length + 3 > 32) {
+        } else if (name.length + normalizedNumber.length + 3 > 32) {
             const length = 32 - name.length - 4;
-            return `${name} (${number.slice(0, length)}…)`;
+            return `${name} (${normalizedNumber.slice(0, length)}…)`;
         }
-        return `${name} (${number})`;
+        return `${name} (${normalizedNumber})`;
+    }
+    /**
+     * Gets contents of the message quote embed.
+     * @param {Message} quoted Quoted message
+     * @param {object} group Group configuration
+     * @returns {string} Contents of the message quote embed
+     */
+    getQuotedMessageContents(quoted, group) {
+        const message = quoted.body ? quoted.body : quoted.type,
+              url = this.cache[quoted.id.id] ?
+                  `[**View message**](https://discordapp.com/channels/${group.guildId}/${group.channelId}/${this.cache[quoted.id.id]})` :
+                  '';
+        return `${message}\n${url}`;
+    }
+    /**
+     * Saves the cache.
+     */
+    async saveCache() {
+        try {
+            await fs.promises.writeFile(
+                'cache.json',
+                JSON.stringify(this.cache)
+            );
+        } catch (error) {
+            console.error('An error occurred while saving cache:', error);
+        }
     }
     /**
      * Ends the relay.
      */
     async kill() {
-        console.log('Closing...');
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
+        console.info('Closing...');
+        await this.client.destroy();
+        for (const group of config.groups) {
+            group.webhook.destroy();
         }
-        if (this.userListInterval !== null) {
-            clearInterval(this.userListInterval);
-        }
-        await this.browser.close();
-        this.webhook.destroy();
+        clearInterval(this.cacheInterval);
     }
 }
 

@@ -8,10 +8,7 @@ $ npm install
 ```
 
 ## Configuration
-Rename `config.sample.json` to `config.json` and change the following to your needs:
-- `id`: Discord webhook ID
-- `token`: Discord webhook token
-- `group`: Group name of the group you're relaying
+Rename `config.sample.json` to `config.json` and change the options in there to your needs.
 
 ## Running
 ```
