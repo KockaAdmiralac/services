@@ -273,6 +273,7 @@ class WhatsAppDiscord {
                     this.cache[message.id.id] = msg.id;
                 }
             }
+            await (await message.getChat()).sendSeen();
             break;
         }
     }
