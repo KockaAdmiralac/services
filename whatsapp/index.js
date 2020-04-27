@@ -142,8 +142,9 @@ class WhatsAppDiscord {
             case 'TIMEOUT':
                 console.error(new Date(), 'A timeout occurred.');
                 break;
-            case 'UNLAUNCHED':
             case 'UNPAIRED':
+                break;
+            case 'UNLAUNCHED':
             case 'UNPAIRED_IDLE':
             default:
                 console.error(new Date(), 'Unknown state:', state);
@@ -155,7 +156,14 @@ class WhatsAppDiscord {
      * @param {WAState} reason State that caused the disconnect
      */
     disconnected(reason) {
-        console.error(new Date(), 'DISCONNECTED:', reason);
+        switch (reason) {
+            case 'UNPAIRED':
+                console.error(new Date(), 'Another device has paired.');
+                break;
+            default:
+                console.error(new Date(), 'DISCONNECTED:', reason);
+                break;
+        }
     }
     /**
      * An error occurred. This event is emitted by every EventEmitter.
@@ -371,7 +379,7 @@ class WhatsAppDiscord {
     getQuotedMessageContents(quoted, group) {
         const message = quoted.body ? quoted.body : quoted.type,
               url = this.cache[quoted.id.id] ?
-                  `[**View message**](https://discordapp.com/channels/${group.guildId}/${group.channelId}/${this.cache[quoted.id.id]})` :
+                  `**[View message](https://discordapp.com/channels/${group.guildId}/${group.channelId}/${this.cache[quoted.id.id]})**` :
                   '';
         return `${message}\n${url}`;
     }
