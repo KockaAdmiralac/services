@@ -239,7 +239,7 @@
         "max-statements": [
             "error",
             {
-                "max": 20
+                "max": 25
             }
         ],
         "max-statements-per-line": "error",
