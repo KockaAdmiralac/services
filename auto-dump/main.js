@@ -1,58 +1,60 @@
 #!/usr/bin/env node
 'use strict';
-const http = require('request-promise-native'),
-      config = require('./config.json'),
-      jar = http.jar(),
-      UA = 'Kocka\'s Mass Database Dumper v1.0';
+const {CookieJar} = require('tough-cookie'),
+      http = require('got').extend({
+          cookieJar: new CookieJar(),
+          headers: {
+              'User-Agent': 'Kocka\'s Mass Database Dumper v1.0'
+          },
+          resolveBodyOnly: true,
+          retry: 0
+      }),
+      config = require('./config.json');
 
 async function login(domain) {
-    return http({
-        headers: {
-            'User-Agent': UA
-        },
-        uri: `https://services.${domain}/auth/token`,
-        method: 'POST',
+    return http.post(`https://services.${domain}/auth/token`, {
         form: {
             username: config.username,
             password: config.password
-        },
-        jar
+        }
     });
 }
 
 async function getEditToken(w) {
-    return http({
-        headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': UA
+    return http.get(`https://${w}/api.php`, {
+        hooks: {
+            afterResponse: [
+                function(response) {
+                    const editToken = response.body.query.pages ?
+                        // Legacy
+                        response.body.query.pages[-1].edittoken :
+                        // UCP
+                        response.body.query.tokens.csrftoken;
+                    response.body = editToken;
+                    return response;
+                }
+            ]
         },
-        method: 'GET',
-        uri: `https://${w}/api.php`,
-        qs: {
+        responseType: 'json',
+        searchParams: {
             action: 'query',
             titles: '#',
+            meta: 'tokens',
             prop: 'info',
             intoken: 'edit',
             format: 'json'
-        },
-        transform: d => d.query.pages[-1].edittoken,
-        jar,
-        json: true
+        }
     });
 }
 
 async function getDump(wiki, editToken) {
-    return http({
-        headers: {
-            'User-Agent': UA
-        },
-        method: 'POST',
-        uri: `https://${wiki}/wiki/Special:Statistics`,
+    return http.post(`https://${wiki}/wiki/Special:Statistics`, {
         form: {
+            dumpDatabase: '1',
             dumpRequest: '1',
-            editToken
-        },
-        jar
+            editToken,
+            wpEditToken: editToken
+        }
     });
 }
 

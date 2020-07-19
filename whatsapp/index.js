@@ -380,7 +380,7 @@ class WhatsAppDiscord {
     getQuotedMessageContents(quoted, group) {
         const message = quoted.body ? quoted.body : quoted.type,
               url = this.cache[quoted.id.id] ?
-                  `**[View message](https://discordapp.com/channels/${group.guildId}/${group.channelId}/${this.cache[quoted.id.id]})**` :
+                  `**[View message](https://discord.com/channels/${group.guildId}/${group.channelId}/${this.cache[quoted.id.id]})**` :
                   '';
         return `${message}\n${url}`;
     }

@@ -11,7 +11,6 @@
  */
 const fs = require('fs'),
       {WebhookClient} = require('discord.js'),
-      FormData = require('form-data'),
       got = require('got'),
       {parse} = require('node-html-parser'),
       {CookieJar} = require('tough-cookie'),
@@ -47,10 +46,12 @@ async function getServices() {
  * Logs into the site.
  */
 async function login() {
-    const body = new FormData();
-    body.append('username', etf.username);
-    body.append('sifra', etf.password);
-    const response = await http.post('/loz.php', {body});
+    const response = await http.post('/loz.php', {
+        form: {
+            sifra: etf.password,
+            username: etf.username
+        }
+    });
     if (response.includes('Morate dati ispravne login podatke!')) {
         throw new Error('Invalid credentials.');
     }

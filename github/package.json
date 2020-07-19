@@ -28,6 +28,6 @@
         "url": "https://github.com/KockaAdmiralac/services.git"
     },
     "dependencies": {
-        "request": ">=2.88.0"
+        "request": ">=2.88.2"
     }
 }

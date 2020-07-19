@@ -31,7 +31,7 @@ const WIKIA_REPO = `https://api.github.com/repos/${REPO_ID}/events`;
 const DISCORD_WEBHOOK_ID    = CONFIG.webhook.id;
 const DISCORD_WEBHOOK_TOKEN = CONFIG.webhook.token;
 const DISCORD_WEBHOOK_COMB  = `${DISCORD_WEBHOOK_ID}/${DISCORD_WEBHOOK_TOKEN}`;
-const DISCORD_WEBHOOK_URL   = `https://discordapp.com/api/webhooks/${DISCORD_WEBHOOK_COMB}`;
+const DISCORD_WEBHOOK_URL   = `https://discord.com/api/webhooks/${DISCORD_WEBHOOK_COMB}`;
 
 // Embed colors
 const DISCORD_EMBED_COLORS = {

@@ -11,5 +11,5 @@ Built for [Fandom Developers Discord](https://dev.fandom.com/wiki/Project:Discor
     - `repo` represents configuration of the GitHub repository location from which the pull requests should be logged.
     - `repo.org` represents the organization name under which the repository is located.
     - `repo.repo` represents the repository name.
-    - `webhook` is an object with two fields, `id` and `token`, that represent the ID and token of the Discord webhook to be used for logging pull requests. Webhook URLs have the structure of: `https://discordapp.com/api/webhooks/{id}/{token}`.
+    - `webhook` is an object with two fields, `id` and `token`, that represent the ID and token of the Discord webhook to be used for logging pull requests. Webhook URLs have the structure of: `https://discord.com/api/webhooks/{id}/{token}`.
 - Run `npm start` to run the logger.

@@ -22,8 +22,8 @@
         "url": "https://github.com/KockaAdmiralac/services.git"
     },
     "dependencies": {
-        "@slack/webhook": ">=5.0.2",
-        "discord.js": ">=11.5.1",
+        "@slack/webhook": ">=5.0.3",
+        "discord.js": ">=12.2.0",
         "petlja": ">=0.1.3"
     }
 }
