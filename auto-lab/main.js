@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env node --tls-min-v1.0 --tls-cipher-list="AES128-SHA"
 /**
  * main.js
  *
@@ -124,16 +124,21 @@ async function recordLab(name) {
             if (webhook) {
                 await webhook.send('Attempting automatic signup...');
             }
+            console.debug('Logging in...');
             await login();
+            console.debug('Getting available terms...');
             const availableTerm = await getTerms(name);
             if (availableTerm) {
+                console.debug('Available term:', availableTerm);
                 await signup(name, availableTerm);
+                console.debug('Signed up.');
                 if (webhook) {
                     await webhook.send('Signup successful!');
                 }
             } else if (webhook) {
                 await webhook.send('No available terms to sign up for!');
             }
+            console.debug('Automatic signup phase ended.');
         }
     } catch (error) {
         console.error(new Date(), 'An error occurred while recording lab:', error);
@@ -196,6 +201,7 @@ async function main() {
     }
     await refresh();
     setInterval(refresh, interval);
+    console.info('Service started.');
 }
 
 main();

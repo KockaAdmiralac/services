@@ -1,6 +1,6 @@
 {
     "name": "auto-lab",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Automatically enrolls to lab practices on RTI.",
     "keywords": [
         "etf"
