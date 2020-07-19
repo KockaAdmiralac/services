@@ -1,7 +1,8 @@
 /**
  * index.js
  *
- * Basic content fetcher from ETF servers.
+ * This module is imported when `basic` is used as a fetcher's type in
+ * etfnews configuration.
  */
 'use strict';
 
@@ -13,11 +14,13 @@ const Fetcher = require('..'),
       got = require('got');
 
 /**
- * Basic content fetcher from ETF servers.
+ * Basic fetcher that fetches content on a specified URL via HTTP.
+ * @augments Fetcher
  */
 class BasicFetcher extends Fetcher {
     /**
-     * Class constructor.
+     * Class constructor. Initializes the HTTP client.
+     * @param {object} config Fetcher configuration
      */
     constructor(config) {
         super(config);
@@ -31,7 +34,9 @@ class BasicFetcher extends Fetcher {
         });
     }
     /**
-     * Fetches page content.
+     * Fetches content from the specified web page.
+     * @param {URL} url URL from which to fetch latest content
+     * @returns {string} Latest available content on the specified location
      */
     async fetch(url) {
         try {

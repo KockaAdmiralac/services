@@ -1,30 +1,44 @@
 /**
  * index.js
  *
- * Base format.
+ * To be imported by all other formats in etfnews.
  */
+'use strict';
 
 /**
- * Base format.
+ * Base format class for all etfnews formats.
+ *
+ * A format in etfnews is a component that acts as a bridge between fetchers
+ * and transports - it formats the content produced (and fetched) by one or
+ * more fetchers so it can be read (and transported) by one or more transports.
  */
 class Format {
     /**
      * Class constructor.
+     * @param {any} config Transport configuration
      */
     constructor(config) {
-        // Stub.
+        // This currently doesn't do anything.
     }
     /**
-     * Formats fetched content into embeds for transporting.
+     * Formats the differences between fetched content into objects that
+     * transports can read and transport.
+     *
+     * Must be implemented by all formats.
+     * @param {URL} url URL of the page where the content was fetched from
+     * @param {string} title Title of the page
+     * @param {any} newContent Newly fetched content
+     * @param {any} oldContent Previously fetched content
+     * @returns {any} Transport-compatible objects
      */
     async format(url, title, newContent, oldContent) {
         throw new Error('Not implemented.');
     }
     /**
-     * Kills the format.
+     * Cleans up the format's resources so the agent can cleanly exit.
      */
     async kill() {
-        // Stub.
+        // This currently doesn't do anything.
     }
 }
 

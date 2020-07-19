@@ -1,7 +1,8 @@
 /**
  * index.js
  *
- * Formats ETF directory contents.
+ * This module is imported when `directory` is used as a format's type in
+ * etfnews configuration.
  */
 'use strict';
 
@@ -17,19 +18,30 @@ const Format = require('..'),
 const DIRECTORY_REGEX = /<img src="\/icons\/[^"]+" alt="\[([^\]]+)\]"> <a href="([^"]+)">[^<]+<\/a>\s*(\d{2}-\w{3}-\d{4} \d{2}:\d{2})/g;
 
 /**
- * Formats ETF directory contents.
+ * Formats an embed for Discord based on differences in Apache directory
+ * listings.
+ *
+ * Currently supports directory listings of older Apache versions, which used
+ * a <pre> tag and spaces for its directory listings (unlike a table in newer
+ * Apache versions).
+ * @augments Format
  */
 class DirectoryFormat extends Format {
     /**
-     * Formats a Discord embed.
+     * Formats the differences between fetched content into Discord embeds.
+     * @param {URL} url URL of the page where the content was fetched from
+     * @param {string} title Title of the page
+     * @param {string} newContent Newly fetched content
+     * @param {string} oldContent Previously fetched content
+     * @returns {object} Transport-compatible objects
      */
     async format(url, title, newContent, oldContent) {
-        const oldListing = this.parseApacheListing(oldContent),
-              newListing = this.parseApacheListing(newContent),
+        const oldListing = this._parseApacheListing(oldContent),
+              newListing = this._parseApacheListing(newContent),
               embeds = [
-                ...this.compareLists('files', url, oldListing.files, newListing.files),
-                ...this.compareLists('directories', url, oldListing.directories, newListing.directories)
-            ];
+                ...this._compareLists('files', url, oldListing.files, newListing.files),
+                ...this._compareLists('directories', url, oldListing.directories, newListing.directories)
+              ];
         if (embeds.length === 0) {
             return;
         }
@@ -53,9 +65,13 @@ class DirectoryFormat extends Format {
         };
     }
     /**
-     * Parses out files and directories from Apache directory listing.
+     * Parses an Apache directory listing to retrieve files and directories
+     * inside it, as well as their modification times.
+     * @param {string} content Apache directory listing HTML contents
+     * @returns {object} Directories and files in the listing
+     * @todo Support newer (tabled) Apache directory listings as well
      */
-    parseApacheListing(content) {
+    _parseApacheListing(content) {
         const listing = {
             directories: {},
             files: {}
@@ -74,9 +90,15 @@ class DirectoryFormat extends Format {
         return listing;
     }
     /**
-     * Compares old lists of files/directories
+     * Compares old and new lists of files or directories and creates Discord
+     * embed content out of them.
+     * @param {string} what Whether files or directories are being compared
+     * @param {URL} url URL of the directory listing being parsed
+     * @param {object} oldList Old file/directory list
+     * @param {object} newList New file/directory list
+     * @returns {string} Discord embed content
      */
-    compareLists(what, url, oldList, newList) {
+    _compareLists(what, url, oldList, newList) {
         const oldFilenames = Object.keys(oldList).sort(),
               newFilenames = Object.keys(newList).sort(),
               changeList = diffArrays(oldFilenames, newFilenames),
@@ -92,20 +114,26 @@ class DirectoryFormat extends Format {
                 .filter(value => oldList[value].getTime() !== newList[value].getTime()),
               embeds = [];
         if (newFiles.length) {
-            embeds.push(this.formatList(`New ${what}`, url, newFiles));
+            embeds.push(this._formatList(`New ${what}`, url, newFiles));
         }
         if (removedFiles.length) {
-            embeds.push(this.formatList(`Removed ${what}`, url, removedFiles));
+            embeds.push(this._formatList(`Removed ${what}`, url, removedFiles));
         }
         if (changedFiles.length) {
-            embeds.push(this.formatList(`Changed ${what}`), url, changedFiles);
+            embeds.push(this._formatList(`Changed ${what}`, url, changedFiles));
         }
         return embeds;
     }
     /**
-     * Formats a list in the embed,
+     * Formats a list of Markdown links to directory files/directories in
+     * the embed,
+     * @param {string} what List title
+     * @param {URL} url URL to the directory where the files/directories
+     *                  are located
+     * @param {Array<string>} list List of new/removed/changes filenames
+     * @returns {string} List of Markdown links to files/directories
      */
-    formatList(what, url, list) {
+    _formatList(what, url, list) {
         return `**${what}:**\n${
             list
                 .map(file => `• [${file}](${url.toString()}/${file})`)

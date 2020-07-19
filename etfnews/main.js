@@ -2,7 +2,7 @@
 /**
  * main.js
  *
- * Entry point of ETFNews.
+ * Main entry point of ETFNews.
  */
 'use strict';
 
@@ -12,10 +12,11 @@
 const fs = require('fs'),
       ETFNews = require('./include/etfnews.js');
 
-let client = null;
+let etfnews = null;
 
 /**
- * Loads ETFNews configuration.
+ * Loads etfnews configuration from `config.json`.
+ * @returns {object} etfnews configuration object
  */
 async function loadConfig() {
     return JSON.parse(await fs.promises.readFile('config.json', {
@@ -24,31 +25,32 @@ async function loadConfig() {
 }
 
 /**
- * Kills the client and exits ETFNews.
+ * Kills the etfnews agent and exits etfnews.
  */
 async function kill() {
-    if (client != null) {
+    if (etfnews != null) {
         console.info('Received kill signal, exiting...');
         try {
-            await client.kill();
+            await etfnews.kill();
         } catch (error) {
-            console.error('Failed to kill client:', error);
+            console.error('Failed to kill agent:', error);
             return;
         }
-        console.info('Client killed.');
+        console.info('Agent killed.');
     }
 }
 
 /**
- * Reloads the client.
+ * Reloads the etfnews agent's configuration.
+ * This currently kills the agent and restarts it.
  */
 async function reload() {
-    if (client != null) {
-        console.info('Reloading client...');
+    if (etfnews != null) {
+        console.info('Reloading agent...');
         try {
-            await client.kill();
+            await etfnews.kill();
         } catch (error) {
-            console.error('Failed to kill client:', error);
+            console.error('Failed to kill agent:', error);
             return;
         }
         let config;
@@ -59,17 +61,17 @@ async function reload() {
             return;
         }
         try {
-            client = new ETFNews(config);
+            etfnews = new ETFNews(config);
         } catch (error) {
-            console.error('Failed to reconfigure client:', error);
+            console.error('Failed to reconfigure agent:', error);
             return;
         }
-        console.info('Client reloaded.');
+        console.info('Agent reloaded.');
     }
 }
 
 /**
- * Main function.
+ * Asynchronous entry point.
  */
 async function main() {
     console.info('ETFNews starting...');
@@ -78,16 +80,20 @@ async function main() {
     try {
         config = await loadConfig();
     } catch (error) {
-        console.error('Failed to load configuration:', error);
+        if (error && error.code === 'ENOENT') {
+            console.error('Configuration was not found. Please make sure the sample configuration has been renamed or copied to `config.json`.');
+        } else {
+            console.error('Failed to load configuration:', error);
+        }
         return;
     }
     try {
-        client = new ETFNews(config);
+        etfnews = new ETFNews(config);
     } catch (error) {
-        console.error('Failed to configure client:', error);
+        console.error('Failed to configure agent:', error);
         return;
     }
-    console.info('Client started.');
+    console.info('Agent started.');
     process.on('SIGINT', kill);
     process.on('SIGHUP', reload);
 }

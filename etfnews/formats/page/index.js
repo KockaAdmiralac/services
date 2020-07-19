@@ -1,7 +1,8 @@
 /**
  * index.js
  *
- * Formats an embed for Discord based on updated page content.
+ * This module is imported when `page` is used as a format's type in
+ * etfnews configuration.
  */
 'use strict';
 
@@ -9,16 +10,22 @@
  * Importing modules.
  */
 const Format = require('..'),
-      md5 = require('md5'),
       {diffLines} = require('diff'),
-      h2m = require('h2m');
+      h2m = require('h2m'),
+      md5 = require('md5');
 
 /**
- * Formats an embed for Discord based on updated page content.
+ * Formats an embed for Discord based on old and new content of an HTML page.
+ * @augments Format
  */
 class PageFormat extends Format {
     /**
-     * Formats a Discord embed.
+     * Formats the differences between fetched content into Discord embeds.
+     * @param {URL} url URL of the page where the content was fetched from
+     * @param {string} title Title of the page
+     * @param {string} newContent Newly fetched content
+     * @param {string} oldContent Previously fetched content
+     * @returns {object} Transport-compatible objects
      */
     async format(url, title, newContent, oldContent) {
         if (md5(newContent) === md5(oldContent)) {
@@ -62,29 +69,12 @@ class PageFormat extends Format {
                     .map(change => change.value)
                     .join(' '),
                 {
+                    // This must be misspelled.
                     overides: {
-                        a: function(node) {
-                            if (!node.attrs || !node.attrs.href) {
-                                return '';
-                            }
-                            const href = node.attrs.href;
-                            if (href.startsWith('http://') || href.startsWith('https://')) {
-                                return `[${node.md}](${href})`;
-                            }
-                            if (href.startsWith('mailto:')) {
-                                return node.md;
-                            }
-                            if (href.startsWith('/')) {
-                                return `[${node.md}](${url.origin}${href})`;
-                            }
-                            return `[${node.md}](${url.origin}${
-                                url.pathname.replace(/\/([^\/]+)$/, '/')
-                            }${href})`;
-                        }
+                        a: this._h2mOverride.bind(this, url)
                     }
                 }
             );
-            console.log(relay);
         }
         if (typeof relay === 'string') {
             return {
@@ -108,6 +98,35 @@ class PageFormat extends Format {
                 }
             }
         }
+    }
+    /**
+     * Overrides h2m's formatting of <a> tags so Discord can accept them as
+     * proper links.
+     *
+     * In particular, page-relative paths must be converted
+     * to absolute paths and no protocols other than http: and https: will be
+     * accepted.
+     * @param {URL} url URL to the page whose changes are being relayed
+     * @param {object} node h2m node object to be formatted to Markdown
+     * @returns {string} Formatted Markdown for the <a> tag
+     */
+    _h2mOverride(url, node) {
+        if (!node.attrs || !node.attrs.href) {
+            return '';
+        }
+        const href = node.attrs.href;
+        if (href.startsWith('http://') || href.startsWith('https://')) {
+            return `[${node.md}](${href})`;
+        }
+        if (href.startsWith('mailto:')) {
+            return node.md;
+        }
+        if (href.startsWith('/')) {
+            return `[${node.md}](${url.origin}${href})`;
+        }
+        return `[${node.md}](${url.origin}${
+            url.pathname.replace(/\/([^\/]+)$/, '/')
+        }${href})`;
     }
 }
 

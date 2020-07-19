@@ -1,6 +1,6 @@
 {
     "name": "etfnews",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Logs changes to pages of University of Belgrade's Faculty of Electrical Engineering web pages.",
     "keywords": [
         "etf",

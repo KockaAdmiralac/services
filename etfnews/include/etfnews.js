@@ -1,7 +1,8 @@
 /**
  * etfnews.js
  *
- * Client for ETFNews.
+ * This is where magic happens, if your definition of magic includes a lot of
+ * Node.js module loading.
  */
 'use strict';
 
@@ -11,20 +12,34 @@
 const Page = require('./page.js');
 
 /**
- * Client for ETFNews.
+ * Agent for etfnews.
+ *
+ * Loads all configured transports, formats and fetchers and initializes
+ * all pages.
  */
 class ETFNews {
     /**
-     * Class constructor.
+     * Class constructor. Initializes all submodules of etfnews.
+     * @param {object} transports Transport configuration
+     * @param {object} formats Format configuration
+     * @param {object} fetchers Fetcher configuration
+     * @param {object} pages Page configuration
      */
-    constructor(config) {
-        this._initSubmodule('transport', config.transports);
-        this._initSubmodule('format', config.formats);
-        this._initSubmodule('fetcher', config.fetchers);
-        this._initPages(config.pages);
+    constructor({transports, formats, fetchers, pages}) {
+        this._initSubmodule('transport', transports);
+        this._initSubmodule('format', formats);
+        this._initSubmodule('fetcher', fetchers);
+        this._initPages(pages);
     }
     /**
      * Initializes transports, formats or fetchers used in ETFNews.
+     *
+     * All submodules in etfnews are consistently named and placed under paths
+     * in the format of {submodule type}s/{submodule name}/index.js.
+     * (For example: transports/discord/index.js)
+     * @param {string} type Type of the submodule to be initialized. One of
+     *                      'transport', 'format' or 'fetcher'.
+     * @param {object} submodules Configuration for all submodules
      */
     _initSubmodule(type, submodules) {
         this[`_${type}s`] = {};
@@ -49,7 +64,8 @@ class ETFNews {
         }
     }
     /**
-     * Initializes page configuration.
+     * Configures all pages with previously initialized submodules.
+     * @param {object} pages Configuration for all pages
      */
     _initPages(pages) {
         this._pages = {};
@@ -81,7 +97,8 @@ class ETFNews {
         }
     }
     /**
-     * Kills the ETFNews client.
+     * Cleans up resources used by all submodules and pages and cleanly exits
+     * the agent.
      */
     async kill() {
         for (const content of ['page', 'transport', 'format', 'fetcher']) {

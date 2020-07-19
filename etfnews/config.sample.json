@@ -1,0 +1,37 @@
+{
+    "formats": {
+        "directory": {
+            "type": "directory"
+        },
+        "page": {
+            "type": "page"
+        }
+    },
+    "transports": {
+        "discord": {
+            "type": "discord",
+            "id": "Discord webhook ID goes here",
+            "token": "Discord webhook token goes here"
+        }
+    },
+    "fetchers": {
+        "basic": {
+            "type": "basic"
+        }
+    },
+    "pages": {
+        "test-page": {
+            "format": "page",
+            "transport": "discord",
+            "fetcher": "basic",
+            "url": "URL to a page"
+        },
+        "test-dir": {
+            "format": "directory",
+            "transport": "discord",
+            "fetcher": "basic",
+            "url": "URL to an Apache directory listing",
+            "title": "Custom title for this page"
+        }
+    }
+}
