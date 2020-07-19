@@ -41,12 +41,9 @@ class BasicFetcher extends Fetcher {
     async fetch(url) {
         try {
             const t = Date.now(),
-                  response = await this._client(url, {
-                searchParams: {
-                    t,
-                    ...url.searchParams
-                }
-            });
+                  searchParams = new URLSearchParams(url.searchParams);
+            searchParams.set('t', t);
+            const response = await this._client(url, {searchParams});
             return response
                 .replace(new RegExp(t, 'g'), '')
                 .replace(/<!--(.*?)-->/gs, '')
