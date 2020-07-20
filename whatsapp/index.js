@@ -47,6 +47,7 @@ class WhatsAppDiscord {
      */
     constructor() {
         this.queue = [];
+        this.currentlyProcessing = false;
         this.initWebhooks();
         this.initCache();
         this.initClient();
@@ -97,8 +98,13 @@ class WhatsAppDiscord {
      * existing session.
      * @param {string} message ?
      */
-    authFailure(message) {
+    async authFailure(message) {
         console.error(new Date(), 'AUTHENTICATION FAILURE:', message);
+        console.info('Clearing authentication data and retrying...');
+        // Clear authentication data and restart client.
+        delete this.cache._session;
+        await this.client.destroy();
+        this.initClient();
     }
     /**
      * Emitted when authentication is successful.
@@ -228,14 +234,14 @@ class WhatsAppDiscord {
         if (message.fromMe) {
             return;
         }
-        if (this.queue.length) {
+        if (this.currentlyProcessing) {
             // The queue is not empty, wait.
             console.debug('Current queue length:', this.queue.length);
             this.queue.push(message);
             return;
         }
-        // The queue is empty, add ourselves.
-        this.queue.push(message);
+        // Lock the resources.
+        this.currentlyProcessing = true;
         for (const group of config.groups) {
             if (group.groupId && message.from !== group.groupId) {
                 continue;
@@ -264,8 +270,8 @@ class WhatsAppDiscord {
             }
             break;
         }
-        // Remove ourselves from the queue.
-        this.queue.shift();
+        // Unlock the resources.
+        this.currentlyProcessing = false;
         if (this.queue.length) {
             // Process next message in queue.
             await this.message(this.queue.shift());
