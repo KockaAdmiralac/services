@@ -133,7 +133,7 @@ class WhatsAppDiscord {
                 await this.report('Conflicting with another client!');
                 break;
             case 'CONNECTED':
-                console.info(new Date(), 'Reconnected.');
+                await this.report('Reconnected.');
                 break;
             case 'DEPRECATED_VERSION':
                 await this.report(
@@ -141,10 +141,10 @@ class WhatsAppDiscord {
                 );
                 break;
             case 'OPENING':
-                console.info(new Date(), 'Reconnecting...');
+                await this.report('Reconnecting...');
                 break;
             case 'PAIRING':
-                console.info(new Date(), 'Pairing...');
+                await this.report('Pairing...');
                 break;
             case 'PROXYBLOCK':
                 await this.report('Our proxy has been blocked!');
