@@ -1,6 +1,6 @@
 {
     "name": "auto-lab",
-    "version": "1.0.1",
+    "version": "2.0.0",
     "description": "Automatically enrolls to lab practices on RTI.",
     "keywords": [
         "etf"
@@ -20,8 +20,9 @@
         "url": "https://github.com/KockaAdmiralac/services.git"
     },
     "dependencies": {
-        "discord.js": ">=12.2.0",
-        "got": ">=11.5.1",
+        "discord.js": ">=12.3.1",
+        "got": ">=11.6.2",
+        "n": "^6.7.0",
         "node-html-parser": ">=1.2.20",
         "tough-cookie": ">=4.0.0"
     }

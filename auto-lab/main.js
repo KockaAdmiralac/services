@@ -14,7 +14,7 @@ const fs = require('fs'),
       got = require('got'),
       {parse} = require('node-html-parser'),
       {CookieJar} = require('tough-cookie'),
-      {autoSignupRegex, discord, etf, interval} = require('./config.json');
+      {etf, interval, relays, notifications} = require('./config.json');
 
 /**
  * Globals.
@@ -25,28 +25,53 @@ const http = got.extend({
         'User-Agent': 'ETF auto-lab client'
     },
     method: 'GET',
-    prefixUrl: 'https://rti.etf.bg.ac.rs/labvezbe',
+    prefixUrl: 'https://rti.etf.bg.ac.rs/',
     resolveBodyOnly: true,
     retry: 0
-}), regex = autoSignupRegex ? new RegExp(autoSignupRegex, 'u') : null,
-    webhook = discord ? new WebhookClient(discord.id, discord.token) : null;
+}), serviceWebhook = notifications ? new WebhookClient(notifications.id, notifications.token) : null,
+    typeNameMap = {
+        domaci: 'homework',
+        labvezbe: 'lab'
+    },
+    relayList = relays.map(config => ({
+        autoSignup: config.autoSignup,
+        regex: new RegExp(config.regex, 'u'),
+        type: config.type,
+        webhook: new WebhookClient(config.id, config.token)
+    }));
 let cache = null;
 
 /**
  * Refreshes the lab service list.
  */
 async function getServices() {
-    const html = await http('/'),
+    const html = await http('labvezbe/'),
           tree = parse(html);
     return tree.querySelectorAll('ol.rounded-list li a')
-        .map(node => node.rawText.trim());
+        .map(node => ({
+            name: node.rawText.trim(),
+            type: 'labvezbe'
+        }));
+}
+
+/**
+ * Refreshes the homework list.
+ */
+async function getHomeworks() {
+    const html = await http('domaci'),
+          tree = parse(html);
+    return tree.querySelectorAll('a')
+        .map(node => ({
+            name: node.rawText.trim(),
+            type: 'domaci'
+        }));
 }
 
 /**
  * Logs into the site.
  */
 async function login() {
-    const response = await http.post('/loz.php', {
+    const response = await http.post('labvezbe/loz.php', {
         form: {
             sifra: etf.password,
             username: etf.username
@@ -62,7 +87,7 @@ async function login() {
  * @param {string} service Service to check for availability
  */
 async function getTerms(service) {
-    const html = await http('/', {
+    const html = await http('labvezbe', {
         searchParams: {
             servis: service
         }
@@ -90,7 +115,7 @@ async function getTerms(service) {
  * @param {number} term Term ID to sign up for
  */
 async function signup(service, term) {
-    const response = await http('/addUserToTermin.php', {
+    const response = await http('labvezbe/addUserToTermin.php', {
         searchParams: {
             servis: service,
             terminID: term
@@ -109,42 +134,50 @@ async function saveCache() {
 }
 
 /**
+ * Logs to console and relays a message to Discord.
+ * @param {string} text Text to log and relay
+ * @param {Error} error Error to log to console
+ */
+async function notify(text, error) {
+    console.info(new Date(), text, error);
+    if (serviceWebhook && text.length) {
+        await serviceWebhook.send(text);
+    }
+}
+
+/**
  * Records a lab as viewed in cache and attempts auto-signup if needed.
  * @param {string} name Lab service name
  */
-async function recordLab(name) {
+async function recordLab({name, type}) {
     try {
-        console.info(new Date(), 'Recording lab', name);
-        cache.add(name);
+        const key = `${type}:${name}`,
+              typeName = typeNameMap[type];
+        await notify(`Recording ${typeName}: ${name}.`);
+        cache.add(key);
         await saveCache();
-        if (webhook) {
-            await webhook.send(`New lab: [${name.replace(/_/g, ' ')}](<https://rti.etf.bg.ac.rs/labvezbe/?servis=${encodeURIComponent(name)}>)`);
-        }
-        if (regex && regex.exec(name)) {
-            if (webhook) {
-                await webhook.send('Attempting automatic signup...');
+        for (const relay of relayList) {
+            if (!relay.regex.exec(name) || relay.type !== type) {
+                continue;
             }
-            console.debug('Logging in...');
+            await relay.webhook.send(`New ${typeName}: [${name.replace(/_/g, ' ')}](<https://rti.etf.bg.ac.rs/${type}/?servis=${encodeURIComponent(name)}>)`);
+            if (!relay.autoSignup) {
+                continue;
+            }
+            await notify('Attempting automatic signup...');
             await login();
-            console.debug('Getting available terms...');
+            await notify('Getting available terms...');
             const availableTerm = await getTerms(name);
-            if (availableTerm) {
-                console.debug('Available term:', availableTerm);
+            if (typeof availableTerm === 'number') {
+                await notify(`Available term: ${availableTerm}, signing up...`);
                 await signup(name, availableTerm);
-                console.debug('Signed up.');
-                if (webhook) {
-                    await webhook.send('Signup successful!');
-                }
-            } else if (webhook) {
-                await webhook.send('No available terms to sign up for!');
+                await notify('Signup successful!');
+            } else {
+                await notify('No available terms to sign up for!');
             }
-            console.debug('Automatic signup phase ended.');
         }
     } catch (error) {
-        console.error(new Date(), 'An error occurred while recording lab:', error);
-        if (webhook) {
-            webhook.send('An error occurred while recording lab!');
-        }
+        await notify('An error occurred while recording lab!', error);
     }
 }
 
@@ -155,7 +188,8 @@ async function refresh() {
     try {
         await Promise.all(
             (await getServices())
-                .filter(service => !cache.has(service))
+                .concat(await getHomeworks())
+                .filter(({name, type}) => !cache.has(`${type}:${name}`))
                 .map(recordLab)
         );
     } catch (error) {
@@ -166,16 +200,11 @@ async function refresh() {
                     'Timed out while refreshing services list'
                 );
             } else {
-                console.error(
-                    new Date(),
-                    'Unknown request error:',
-                    error
-                );
+                await notify('Unknown request error.', error);
             }
         } else {
-            console.error(
-                new Date(),
-                'An error occurred while refreshing service list:',
+            await notify(
+                'An error occurred while refreshing service list.',
                 error
             );
         }
@@ -193,7 +222,11 @@ async function main() {
     } catch (error) {
         if (error && error.code === 'ENOENT') {
             console.info('Cache not found, initializing anew.');
-            cache = new Set(await getServices());
+            cache = new Set(
+                (await getServices())
+                    .concat(await getHomeworks())
+                    .map(({type, name}) => `${type}:${name}`)
+            );
             await saveCache();
         } else {
             console.error('Error while loading cache:', error);
@@ -201,7 +234,7 @@ async function main() {
     }
     await refresh();
     setInterval(refresh, interval);
-    console.info('Service started.');
+    await notify('Service started.');
 }
 
 main();
