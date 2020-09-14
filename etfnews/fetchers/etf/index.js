@@ -40,7 +40,7 @@ class ETFFetcher extends Fetcher {
             resolveBodyOnly: true,
             retry: 0
         });
-        this.cache = new Date('2020-09-08T07:29:52.000Z');
+        this.cache = new Date();
     }
     /**
      * Fetches content from the specified web page.
