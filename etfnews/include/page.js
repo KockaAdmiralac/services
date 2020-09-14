@@ -76,7 +76,7 @@ class Page {
                 return;
             }
         }
-        if (formattedContent || !this._oldContent) {
+        if (formattedContent || typeof this._oldContent !== 'string') {
             this._oldContent = content;
             try {
                 await this._recordNewContent();
