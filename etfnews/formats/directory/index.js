@@ -15,15 +15,11 @@ const Format = require('..'),
 /**
  * Constants.
  */
-const DIRECTORY_REGEX = /<img src="\/icons\/[^"]+" alt="\[([^\]]+)\]"> <a href="([^"]+)">[^<]+<\/a>\s*(\d{2}-\w{3}-\d{4} \d{2}:\d{2})/g;
+const DIRECTORY_REGEX = /<img src="\/icons\/[^"]+" alt="\[([^\]]+)\]">(?:<\/td><td>)?\s*<a href="([^"]+)">[^<]+<\/a>(?:<\/td><td align="right">)?\s*(\d+-(?:\w{3}|\d+)-\d+ \d+:\d+)/g;
 
 /**
  * Formats an embed for Discord based on differences in Apache directory
  * listings.
- *
- * Currently supports directory listings of older Apache versions, which used
- * a <pre> tag and spaces for its directory listings (unlike a table in newer
- * Apache versions).
  * @augments Format
  */
 class DirectoryFormat extends Format {

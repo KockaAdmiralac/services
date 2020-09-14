@@ -15,7 +15,7 @@
 class Format {
     /**
      * Class constructor.
-     * @param {any} config Transport configuration
+     * @param {any} config Format configuration
      */
     constructor(config) {
         // This currently doesn't do anything.
