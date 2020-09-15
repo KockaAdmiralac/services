@@ -122,8 +122,12 @@ petlja.on('login', async function() {
         const {staff_action_logs} = await petlja.algora.staffLogs(),
               last = staff_action_logs.filter(l => l.id > lastId);
         for (const log of last) {
-            discord(log);
-            slack(log);
+            if (discordWebhook) {
+                discord(log);
+            }
+            if (slackWebhook) {
+                slack(log);
+            }
             if (lastId === 0) {
                 break;
             }

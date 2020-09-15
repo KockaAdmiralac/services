@@ -450,7 +450,6 @@ class WhatsAppDiscord {
      * Initializes the relay.
      */
     run() {
-        console.log('initialize');
         this.client.initialize();
     }
     /**
