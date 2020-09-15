@@ -1,6 +1,6 @@
 {
     "name": "algora-staff-log",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Logs staff action logs on Algora to Discord and Slack.",
     "keywords": [
         "petlja",
@@ -23,7 +23,7 @@
     },
     "dependencies": {
         "@slack/webhook": ">=5.0.3",
-        "discord.js": ">=12.2.0",
+        "discord.js": ">=12.3.1",
         "petlja": ">=0.1.3"
     }
 }
