@@ -1,6 +1,6 @@
 {
     "name": "etfnews",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": "Logs changes to pages of University of Belgrade's Faculty of Electrical Engineering web pages.",
     "keywords": [
         "etf",
@@ -23,9 +23,9 @@
     },
     "dependencies": {
         "diff": ">=4.0.2",
-        "discord.js": ">=12.2.0",
-        "got": ">=11.5.1",
+        "discord.js": ">=12.3.1",
+        "got": ">=11.6.2",
         "h2m": ">=0.7.0",
-        "md5": ">=2.2.1"
+        "md5": ">=2.3.0"
     }
 }
