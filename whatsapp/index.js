@@ -99,8 +99,7 @@ class WhatsAppDiscord {
      * @param {string} message ?
      */
     async authFailure(message) {
-        console.error(new Date(), 'AUTHENTICATION FAILURE:', message);
-        console.info('Clearing authentication data and retrying...');
+        await this.report(`AUTHENTICATION FAILURE (retrying): ${JSON.stringify(message)}`);
         // Clear authentication data and restart client.
         delete this.cache._session;
         await this.client.destroy();
@@ -110,8 +109,8 @@ class WhatsAppDiscord {
      * Emitted when authentication is successful.
      * @param {object} session Object containing session information.
      */
-    authenticated(session) {
-        console.info(new Date(), 'Authenticated to WhatsApp.');
+    async authenticated(session) {
+        await this.report('Authenticated to WhatsApp.');
         this.cache._session = session;
     }
     /**
@@ -184,7 +183,18 @@ class WhatsAppDiscord {
      * @param {Error} error The error that occurred
      */
     async error(error) {
-        await this.report('Unknown error:', error);
+        if (
+            error &&
+            typeof error.cause === 'string' &&
+            error.cause.includes('Page crashed!')
+        ) {
+            await this.report('Page crashed! Attempting to restart...');
+            await this.kill();
+            // This should tell systemd to restart the service.
+            process.exit(1);
+        } else {
+            await this.report('Unknown error:', error);
+        }
     }
     /**
      * Emitted when a user joins the chat via invite link or is added by an
@@ -231,7 +241,7 @@ class WhatsAppDiscord {
      * @param {Message} message The message that was received
      */
     async message(message) {
-        if (message.fromMe) {
+        if (message.fromMe || this.killing) {
             return;
         }
         if (this.currentlyProcessing) {
@@ -425,22 +435,22 @@ class WhatsAppDiscord {
      * @param {string} qr QR code
      */
     qr(qr) {
-        console.info(new Date(), 'QR code received.');
         qrcode.generate(qr, {
             small: true
-        });
+        }, image => this.report(`QR code received:\`\`\`\n${image}\`\`\``));
     }
     /**
      * Emitted when the client has initialized and is ready to receive
      * messages.
      */
-    ready() {
-        console.info(new Date(), 'The client is ready!');
+    async ready() {
+        await this.report('The client is ready!');
     }
     /**
      * Initializes the relay.
      */
     run() {
+        console.log('initialize');
         this.client.initialize();
     }
     /**
@@ -502,8 +512,14 @@ class WhatsAppDiscord {
      * Ends the relay.
      */
     async kill() {
+        this.killing = true;
+        this.queue = [];
         console.info('Closing...');
-        await this.client.destroy();
+        try {
+            await this.client.destroy();
+        } catch (error) {
+            console.error('An error occurred while killing the client:', error);
+        }
         for (const group of config.groups) {
             group.webhook.destroy();
         }
@@ -522,7 +538,10 @@ class WhatsAppDiscord {
         if (this.reporting) {
             let newMessage = message;
             if (error) {
-                newMessage += `:\`\`\`${error.stack}\`\`\``;
+                newMessage += `\`\`\`${error.stack.slice(0, 1000)}\`\`\``;
+            }
+            if (newMessage.length === 0) {
+                newMessage = '<empty message>';
             }
             await this.reporting.send(newMessage);
         }
