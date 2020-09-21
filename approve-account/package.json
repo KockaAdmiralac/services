@@ -1,0 +1,28 @@
+{
+    "name": "auto-dump",
+    "version": "0.0.1",
+    "description": "Automatically approves account requests made through the ConfirmAccount extension based on their email address.",
+    "keywords": [
+        "mediawiki"
+    ],
+    "license": "MIT",
+    "author": {
+        "name": "KockaAdmiralac",
+        "email": "git@kocka.tech",
+        "url": "https://kocka.tech"
+    },
+    "main": "main.js",
+    "scripts": {
+        "start": "node main.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/KockaAdmiralac/services.git"
+    },
+    "dependencies": {
+        "discord.js": ">=12.3.1",
+        "got": ">=11.7.0",
+        "mysql2": ">=2.2.5",
+        "tough-cookie": ">=4.0.0"
+    }
+}
