@@ -17,7 +17,7 @@ const Fetcher = require('..'),
  * Constants.
  */
 const NEWS_HTML_FILTER = /\$\('#vesti-arhiva-filtered'\)\.html\("(.*)"\);\n\$\('#vesti-arhiva-pagination'\)\.html\("/,
-      INFORMATION_FILTER = /<h3 class="vest-naslov"><a href="\/([^"]+)">([^<]+)<\/a><\/h3><time class="vest-objavljeno" datetime="([^"]+)" title="[^"]+">[^<]+<\/time><\/header><div class="vest-ukratko"><p>([^<]+)<\/p>/;
+      INFORMATION_FILTER = /<h3 class="vest-naslov"><a href="\/([^"]+)">([^<]*)<\/a><\/h3><time class="vest-objavljeno" datetime="([^"]+)" title="[^"]*">[^<]*<\/time><\/header><div class="vest-ukratko"><p>([^<]*)<\/p>/;
 
 /**
  * Fetches news from ETF main page.
@@ -69,9 +69,14 @@ class ETFFetcher extends Fetcher {
             }
             this.cache = new Date();
             const parsed = INFORMATION_FILTER.exec(response);
+            if (parsed === null) {
+                console.error('Failed to parse news!', response);
+                return '';
+            }
+            const snippet = parsed[4].trim();
             return JSON.stringify({
                 date: new Date(parsed[3]),
-                snippet: parsed[4],
+                snippet: snippet ? snippet : 'No description provided.',
                 title: parsed[2],
                 url: `https://etf.bg.ac.rs/${parsed[1]}`
             });
