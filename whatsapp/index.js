@@ -13,6 +13,7 @@ const fs = require('fs'),
       FileType = require('file-type'),
       {Client} = require('whatsapp-web.js'),
       qrcode = require('qrcode-terminal'),
+      Twinkle = require('../util/twinkle.js'),
       config = require('./config.json');
 
 /**
@@ -79,7 +80,50 @@ class WhatsAppDiscord {
                 group.webhookId,
                 group.webhookToken
             );
+            if (group.socket && group.groupId) {
+                group.twinkle = new Twinkle(group.socket)
+                    .on('error', this.twinkleError.bind(this))
+                    .on('connected', this.twinkleConnected.bind(this))
+                    .on('disconnected', this.twinkleDisconnected.bind(this))
+                    .on('message', this.twinkleMessage.bind(this, group));
+            }
         }
+    }
+    /**
+     * Handles Twinkle connection errors.
+     * @param {Error} error Twinkle connection error that occurred
+     */
+    async twinkleError(error) {
+        await this.report('Twinkle connection error:', error);
+    }
+    /**
+     * Listens for Twinkle connections.
+     */
+    async twinkleConnected() {
+        await this.report('Connected to Twinkle.');
+    }
+    /**
+     * Listens for Twinkle disconnecting.
+     */
+    async twinkleDisconnected() {
+        await this.report('Disconnected from Twinkle.');
+    }
+    /**
+     * Handles Twinkle messages.
+     * @param {object} group Group information
+     * @param {object} message Twinkle message object
+     */
+    async twinkleMessage(group, {message, member}) {
+        if (
+            Date.now() - message.createdTimestamp > 5000 ||
+            message.channelID !== group.channelId ||
+            !this.isReady ||
+            message.webhookID
+        ) {
+            return;
+        }
+        const chat = await this.client.getChatById(group.groupId);
+        await chat.sendMessage(`Poruka sa Discord-a od ${member.displayName}:\n${message.content}`);
     }
     /**
      * Initializes message cache.
@@ -117,6 +161,7 @@ class WhatsAppDiscord {
         await this.saveCache();
         // Restart client.
         await this.report('Destroying client...');
+        this.isReady = false;
         await this.client.destroy();
         this.initClient();
         await this.run();
@@ -462,6 +507,7 @@ class WhatsAppDiscord {
      */
     async ready() {
         await this.report('The client is ready!');
+        this.isReady = true;
         if (config.ping) {
             if (this.pingInterval) {
                 clearInterval(this.pingInterval);
@@ -561,12 +607,16 @@ class WhatsAppDiscord {
         this.killing = true;
         this.queue = [];
         try {
+            this.isReady = false;
             await this.client.destroy();
         } catch (error) {
             console.error('An error occurred while killing the client:', error);
         }
         for (const group of config.groups) {
             group.webhook.destroy();
+            if (group.twinkle) {
+                group.twinkle.disconnect();
+            }
         }
         if (this.reporting) {
             this.reporting.destroy();
