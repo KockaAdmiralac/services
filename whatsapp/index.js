@@ -46,11 +46,23 @@ class WhatsAppDiscord {
      * Class constructor.
      */
     constructor() {
-        this.queue = [];
-        this.currentlyProcessing = false;
+        this.initQueue();
         this.initWebhooks();
         this.initCache();
         this.initClient();
+    }
+    /**
+     * Initializes message queuing.
+     * @todo Move the queue to a separate class
+     */
+    initQueue() {
+        this.queue = [];
+        this.currentlyProcessing = false;
+        this.lastMessageInQueue = null;
+        this.queueCheckInterval = setInterval(
+            this.queueCheck.bind(this),
+            60000
+        );
     }
     /**
      * Initializes Discord webhook clients for each group.
@@ -96,14 +108,18 @@ class WhatsAppDiscord {
     /**
      * Emitted when there has been an error while trying to restore an
      * existing session.
-     * @param {string} message ?
+     * @param {string} message Message received during the error
      */
     async authFailure(message) {
-        await this.report(`AUTHENTICATION FAILURE (retrying): ${JSON.stringify(message)}`);
-        // Clear authentication data and restart client.
+        await this.report(`AUTHENTICATION FAILURE: ${message}`);
+        // Clear authentication data.
         delete this.cache._session;
+        await this.saveCache();
+        // Restart client.
+        await this.report('Destroying client...');
         await this.client.destroy();
         this.initClient();
+        await this.run();
     }
     /**
      * Emitted when authentication is successful.
@@ -280,12 +296,7 @@ class WhatsAppDiscord {
             }
             break;
         }
-        // Unlock the resources.
-        this.currentlyProcessing = false;
-        if (this.queue.length) {
-            // Process next message in queue.
-            await this.message(this.queue.shift());
-        }
+        await this.popQueue();
     }
     /**
      * Sends an embed right before a message that quoted another message.
@@ -358,7 +369,10 @@ class WhatsAppDiscord {
         }
         let msg = null;
         try {
-            msg = await group.webhook.send(message.body, options);
+            msg = await group.webhook.send(
+                this.trimMessage(message.body),
+                options
+            );
         } catch (error) {
             if (
                 error &&
@@ -400,8 +414,11 @@ class WhatsAppDiscord {
             message.id.id,
             'in',
             message.from,
-            'had its ACK status changed to',
-            ack
+            ack === 1 ?
+                'successfully sent' :
+                ack === 2 ?
+                    'successfully received' :
+                    `had its ACK status changed to ${ack}`
         );
     }
     /**
@@ -445,11 +462,24 @@ class WhatsAppDiscord {
      */
     async ready() {
         await this.report('The client is ready!');
+        if (config.ping) {
+            if (this.pingInterval) {
+                clearInterval(this.pingInterval);
+            }
+            this.pingChat = await (await this.client
+                .getContactById(config.ping.contact))
+                .getChat();
+            this.pingInterval = setInterval(
+                this.ping.bind(this),
+                config.ping.interval || 60 * 60 * 1000
+            );
+        }
     }
     /**
      * Initializes the relay.
      */
-    run() {
+    async run() {
+        await this.report('Initializing client...');
         this.client.initialize();
     }
     /**
@@ -482,13 +512,29 @@ class WhatsAppDiscord {
         return `${name} (${normalizedNumber})`;
     }
     /**
-     * Gets contents of the message quote embed.
+     * Trims a message to fit into the Discord message size limit (2000).
+     *
+     * The message is trimmed to 1901 characters as message quoting may add
+     * a link to the bottom of the quote embed (embed size limit is 2048).
+     * @param {string} message Message to trim
+     * @returns {string} Trimmed message
+     */
+    trimMessage(message) {
+        if (message.length < 1900) {
+            return message;
+        }
+        return `${message.slice(0, 1900)}…`;
+    }
+    /**
+     * Gets contents of the message quote embed for relaying to Discord.
      * @param {Message} quoted Quoted message
      * @param {object} group Group configuration
      * @returns {string} Contents of the message quote embed
      */
     getQuotedMessageContents(quoted, group) {
-        const message = quoted.body ? quoted.body : quoted.type,
+        const message = quoted.body ?
+                  this.trimMessage(quoted.body) :
+                  quoted.type,
               url = this.cache[quoted.id.id] ?
                   `**[View message](https://discord.com/channels/${group.guildId}/${group.channelId}/${this.cache[quoted.id.id]})**` :
                   '';
@@ -511,9 +557,9 @@ class WhatsAppDiscord {
      * Ends the relay.
      */
     async kill() {
+        await this.report('Killing client...');
         this.killing = true;
         this.queue = [];
-        console.info('Closing...');
         try {
             await this.client.destroy();
         } catch (error) {
@@ -525,7 +571,34 @@ class WhatsAppDiscord {
         if (this.reporting) {
             this.reporting.destroy();
         }
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+        }
         clearInterval(this.cacheInterval);
+        clearInterval(this.queueCheckInterval);
+    }
+    /**
+     * Unlocks the resources and processes the next message in queue.
+     */
+    async popQueue() {
+        this.currentlyProcessing = false;
+        if (this.queue.length) {
+            await this.message(this.queue.shift());
+        }
+    }
+    /**
+     * Forwards the queue if it has been stuck on the last message.
+     */
+    async queueCheck() {
+        if (this.queue.length === 0) {
+            this.lastMessageInQueue = null;
+            return;
+        }
+        if (this.lastMessageInQueue === this.queue[0]) {
+            await this.report('Forwarding queue...');
+            await this.popQueue();
+        }
+        this.lastMessageInQueue = this.queue[0];
     }
     /**
      * Reports a message to Discord if configured.
@@ -543,6 +616,16 @@ class WhatsAppDiscord {
                 newMessage = '<empty message>';
             }
             await this.reporting.send(newMessage);
+        }
+    }
+    /**
+     * Pings a configured WhatsApp chat.
+     */
+    async ping() {
+        try {
+            await this.pingChat.sendMessage('Ping');
+        } catch (error) {
+            await this.report('Ping error:', error);
         }
     }
 }
