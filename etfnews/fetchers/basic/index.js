@@ -24,9 +24,12 @@ class BasicFetcher extends Fetcher {
      */
     constructor(config) {
         super(config);
+        this._replacements = config.replacements instanceof Array ?
+            config.replacements.map(([r1, r2]) => [new RegExp(r1, 'g'), r2]) :
+            [];
         this._client = got.extend({
             headers: {
-                'User-Agent': `${pkg.name} v${pkg.version}: ${pkg.description}`
+                'User-Agent': `${pkg.name} v${pkg.version}: ${pkg.description} [${pkg.url}]`
             },
             method: 'GET',
             resolveBodyOnly: true,
@@ -44,13 +47,17 @@ class BasicFetcher extends Fetcher {
                   searchParams = new URLSearchParams(url.searchParams);
             searchParams.set('t', t);
             const response = await this._client(url, {searchParams});
-            return response
+            let replacedContent = response
                 .replace(new RegExp(t, 'g'), '')
                 .replace(/<!--(.*?)-->/gs, '')
                 .split('\n')
                 .map(line => line.trim())
                 .filter(Boolean)
                 .join('\n');
+            for (const replacement of this._replacements) {
+                replacedContent = replacedContent.replace(...replacement);
+            }
+            return replacedContent;
         } catch (error) {
             // TODO: Add handling of specific request errors here.
             throw error;

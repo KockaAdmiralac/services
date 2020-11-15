@@ -1,11 +1,12 @@
 {
     "name": "etfnews",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Logs changes to pages of University of Belgrade's Faculty of Electrical Engineering web pages.",
     "keywords": [
         "etf",
         "discord"
     ],
+    "url": "https://uploads.kocka.tech/etfnews.html",
     "license": "MIT",
     "author": {
         "name": "KockaAdmiralac",
@@ -22,9 +23,9 @@
         "url": "https://github.com/KockaAdmiralac/services.git"
     },
     "dependencies": {
-        "diff": ">=4.0.2",
-        "discord.js": ">=12.3.1",
-        "got": ">=11.6.2",
+        "diff": ">=5.0.0",
+        "discord.js": ">=12.4.1",
+        "got": ">=11.8.0",
         "h2m": ">=0.7.0",
         "md5": ">=2.3.0"
     }
