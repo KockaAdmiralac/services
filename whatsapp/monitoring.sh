@@ -5,6 +5,7 @@ cd "${0%/*}"
 # If monitoring failed before, do not run until it has recovered
 if [ -f "monitoring-failed" ]
 then
+    echo "Monitoring previously failed, exiting"
     exit
 fi
 
@@ -15,6 +16,7 @@ user_id="$(echo $config | jq -r .reporting.user)"
 
 # Reports an anomaly with the service and prevents further checks
 report() {
+    echo "$1"
     curl -H "Content-Type: application/json" -X POST -d "{\"content\": \"$1 <@$user_id>\"}" $webhook_url
     touch monitoring-failed
 }
@@ -30,7 +32,7 @@ then
 fi
 
 # Request information from service to check whether it's working
-kill -INFO "$pid"
+kill -USR2 "$pid"
 sleep 5s
 if [ -f "monitoring.txt" ]
 then
@@ -42,3 +44,5 @@ then
 else
     report "Monitoring file does not exist."
 fi
+
+echo "Monitoring finished."
