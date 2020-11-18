@@ -11,4 +11,5 @@ const relay = new WhatsAppDiscord();
 relay.run();
 process.on('SIGINT', relay.kill.bind(relay));
 process.on('SIGTERM', relay.kill.bind(relay));
+process.on('SIGINFO', relay.dumpChats.bind(relay));
 process.on('unhandledRejection', relay.error.bind(relay));

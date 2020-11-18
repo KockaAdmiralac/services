@@ -123,7 +123,7 @@ class WhatsAppDiscord {
             return;
         }
         const chat = await this.client.getChatById(group.groupId);
-        await chat.sendMessage(`Poruka sa Discord-a od ${member.displayName}:\n${message.content}`);
+        await chat.sendMessage(`*${member.displayName}* _(Discord)_:\n${message.content}`);
     }
     /**
      * Initializes message cache.
@@ -676,6 +676,20 @@ class WhatsAppDiscord {
             await this.pingChat.sendMessage('Ping');
         } catch (error) {
             await this.report('Ping error:', error);
+        }
+    }
+    /**
+     * Writes all active chats to a file.
+     */
+    async dumpChats() {
+        try {
+            const chats = await this.client.getChats();
+            await fs.promises.writeFile(
+                'monitoring.txt',
+                `Active chats:\n${chats.map(chat => `- ${chat.name}`).join('\n')}`
+            );
+        } catch (error) {
+            await this.report('Failed to dump chats:', error);
         }
     }
 }
