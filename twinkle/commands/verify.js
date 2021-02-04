@@ -14,7 +14,7 @@ const INVALID_CHARACTERS = /[#<>[\]:\{\}]/u;
 class VerifyCommand extends Command {
     constructor(bot) {
         super(bot);
-        this.aliases = ['v'];
+        this.aliases = ['verify', 'v'];
 
         this.shortdesc = `Gives you the member role.`;
         this.desc = `Gives you the member role if don't already have it.`;
@@ -76,7 +76,7 @@ class VerifyCommand extends Command {
         if (!content) {
             return this.verificationError(message, 'You did not specify a username. Please use the command as `!verify <your Fandom username>`');
         }
-        const username = content.replace(/^<?(.*)>?$/, '$1');
+        const username = content.replace(/^<?([^>]+)>?$/, '$1');
 
         // User specified a username with '@' in it
         if (username.includes('@')) {
