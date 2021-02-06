@@ -73,7 +73,7 @@ class WhoisCommand extends Command {
                         },
                         {
                             name: 'Broj telefona',
-                            value: user.phoneNumbers ?
+                            value: user.phoneNumbers.length ?
                                 user.phoneNumbers
                                     .map(pn => `+${pn}`)
                                     .join('\n') :

@@ -29,7 +29,7 @@ class SIBaza {
         return this.toUser((await this.db.execute(
             'SELECT s.`index`, s.`year`, CAST(s.`discord_id` AS VARCHAR(255)) AS `discord_id`, s.`last_name`, s.`first_name`, pn.`number`' +
             'FROM `students` s ' +
-            'JOIN `phone_numbers` pn ON s.year = pn.year AND s.index = pn.index ' +
+            'LEFT JOIN `phone_numbers` pn ON s.year = pn.year AND s.index = pn.index ' +
             'WHERE s.`year` = ? AND s.`index` = ?',
             [year, index]
         ))[0]);
@@ -38,7 +38,7 @@ class SIBaza {
         return this.toUser((await this.db.execute(
             'SELECT s.`index`, s.`year`, CAST(s.`discord_id` AS VARCHAR(255)) AS `discord_id`, s.`last_name`, s.`first_name`, pn.`number`' +
             'FROM `students` s ' +
-            'JOIN `phone_numbers` pn ON s.year = pn.year AND s.index = pn.index ' +
+            'LEFT JOIN `phone_numbers` pn ON s.year = pn.year AND s.index = pn.index ' +
             'WHERE CAST(s.`discord_id` AS VARCHAR(255)) = ?',
             [discordID]
         ))[0]);
@@ -47,7 +47,7 @@ class SIBaza {
         return this.toUser((await this.db.execute(
             'SELECT s.`index`, s.`year`, CAST(s.`discord_id` AS VARCHAR(255)) AS `discord_id`, s.`last_name`, s.`first_name`, pn.`number`' +
             'FROM `students` s ' +
-            'JOIN `phone_numbers` pn ON s.year = pn.year AND s.index = pn.index ' +
+            'LEFT JOIN `phone_numbers` pn ON s.year = pn.year AND s.index = pn.index ' +
             'WHERE s.`first_name` = ? AND s.`last_name` = ?',
             [firstName, lastName]
         ))[0]);
