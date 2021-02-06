@@ -13,8 +13,8 @@ class SIAddCommand extends ModCommand {
     constructor(bot) {
         super(bot);
         this.aliases = ['siadd', 'sia'];
-        this.shortdesc = 'Queries the SI database.';
-        this.desc = 'Queries the SI database for a person and shows their information in an embed.';
+        this.shortdesc = 'Adds a person to the SI database.';
+        this.desc = 'Adds specified semicolon-delimited information about a person to the SI database.';
         this.usages = [
             '!siadd 2010;0001;Име;Презиме;148231501413089280',
             '!sia 2010;0001;Име;Презиме'
