@@ -20,6 +20,24 @@ const Format = require('..'),
  */
 class PageFormat extends Format {
     /**
+     * Extracts useful content from a page.
+     * @param {string} content Content to format
+     * @param {URL} url URL of the page
+     * @returns {string} Extracted content
+     */
+    extract(content, url) {
+        return h2m(content, {
+            // This must be misspelled.
+            overides: {
+                a: this.linkOverride.bind(this, url)
+            }
+        })
+            .split('\n')
+            .map(line => line.trim())
+            .filter(Boolean)
+            .join('\n');
+    }
+    /**
      * Formats the differences between fetched content into Discord embeds.
      * @param {URL} url URL of the page where the content was fetched from
      * @param {string} title Title of the page
@@ -28,76 +46,35 @@ class PageFormat extends Format {
      * @returns {object} Transport-compatible objects
      */
     async format(url, title, newContent, oldContent) {
-        if (md5(newContent) === md5(oldContent)) {
+        const extractedNew = this.extract(newContent, url),
+              extractedOld = this.extract(oldContent, url);
+        if (md5(extractedNew) === md5(extractedOld)) {
             return;
         }
-        const changedContent = diffLines(oldContent, newContent)
-            .filter(change => change.added || change.removed),
-              addedLines = changedContent.filter(change => change.added),
-              removedLines = changedContent.filter(change => change.removed),
-              addedLineCount = addedLines.length === 0 ?
-                0 :
-                addedLines.length === 1 ?
-                    addedLines[0].count :
-                    addedLines.reduce((a, b) => a.count + b.count),
-              removedLineCount = removedLines.length === 0 ?
-                0 :
-                removedLines.length === 1 ?
-                    removedLines[0].count :
-                    removedLines.reduce((a, b) => a.count + b.count);
-        let relay = false;
-        if (removedLineCount > 0 || addedLineCount === 1) {
-            // Small content addition or removal.
-            const diff = changedContent
-                .map(change => change.value
-                    .trim()
-                    .split('\n')
-                    .map(line => `${change.added ? '+' : '-'} ${line}`)
-                    .join('\n')
-                )
-                .join('\n')
-                .trim();
-            if (diff.length) {
-                relay = `\`\`\`diff\n${diff}\`\`\``;
-            } else {
-                console.debug(new Date(), 'But the changes weren\'t there.');
-            }
-        } else {
-            // Medium content addition.
-            relay = h2m(
-                addedLines
-                    .map(change => change.value)
-                    .join(' '),
-                {
-                    // This must be misspelled.
-                    overides: {
-                        a: this._h2mOverride.bind(this, url)
+        const changes = diffLines(extractedOld, extractedNew)
+            .filter(change => change.added || change.removed)
+            .map(change => `**${change.added ? 'Dodato' : 'Uklonjeno'}:**\n${change.value.trim()}`)
+            .join('\n');
+        return {
+            content: '',
+            options: {
+                embeds: [
+                    {
+                        color: 0x00658F,
+                        description: changes.length > 2000 ?
+                            'Prevelike izmene, ne može se generisati pregled.' :
+                            changes,
+                        footer: {
+                            icon_url: 'https://pbs.twimg.com/profile_images/3588382817/fc429cf1113d956cee2e85b503b0cfc4.jpeg',
+                            text: 'ETF News'
+                        },
+                        timestamp: new Date().toISOString(),
+                        title: `Stranica '${title || url.toString()}' ažurirana!`,
+                        url: url.toString()
                     }
-                }
-            );
-        }
-        if (typeof relay === 'string') {
-            return {
-                content: '',
-                options: {
-                    embeds: [
-                        {
-                            color: 0x00658F,
-                            description: relay.length > 2000 ?
-                                'Prevelike izmene, ne može se generisati pregled.' :
-                                relay,
-                            footer: {
-                                icon_url: 'https://pbs.twimg.com/profile_images/3588382817/fc429cf1113d956cee2e85b503b0cfc4.jpeg',
-                                text: 'ETF News'
-                            },
-                            timestamp: new Date().toISOString(),
-                            title: `Stranica '${title || url.toString()}' ažurirana!`,
-                            url: url.toString()
-                        }
-                    ]
-                }
+                ]
             }
-        }
+        };
     }
     /**
      * Overrides h2m's formatting of <a> tags so Discord can accept them as
@@ -110,7 +87,7 @@ class PageFormat extends Format {
      * @param {object} node h2m node object to be formatted to Markdown
      * @returns {string} Formatted Markdown for the <a> tag
      */
-    _h2mOverride(url, node) {
+    linkOverride(url, node) {
         if (!node.attrs || !node.attrs.href) {
             return '';
         }

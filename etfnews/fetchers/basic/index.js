@@ -47,13 +47,7 @@ class BasicFetcher extends Fetcher {
                   searchParams = new URLSearchParams(url.searchParams);
             searchParams.set('t', t);
             const response = await this._client(url, {searchParams});
-            let replacedContent = response
-                .replace(new RegExp(t, 'g'), '')
-                .replace(/<!--(.*?)-->/gs, '')
-                .split('\n')
-                .map(line => line.trim())
-                .filter(Boolean)
-                .join('\n');
+            let replacedContent = response.replace(new RegExp(t, 'g'), '');
             for (const replacement of this._replacements) {
                 replacedContent = replacedContent.replace(...replacement);
             }
