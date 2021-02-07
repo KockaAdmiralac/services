@@ -52,6 +52,15 @@ class SIBaza {
             [firstName, lastName]
         ))[0]);
     }
+    async getStudentByPhone(phone) {
+        return this.toUser((await this.db.execute(
+            'SELECT s.`index`, s.`year`, CAST(s.`discord_id` AS VARCHAR(255)) AS `discord_id`, s.`last_name`, s.`first_name`, pn.`number`' +
+            'FROM `phone_numbers` pn ' +
+            'JOIN `students` s ON s.year = pn.year AND s.index = pn.index ' +
+            'WHERE pn.`number` = ?',
+            [phone]
+        ))[0]);
+    }
     async getAllStudents() {
         return (await this.db.execute(
             'SELECT `index`, `year`, CAST(`discord_id` AS VARCHAR(255)) AS `discord_id`, `last_name`, `first_name` FROM `students`'

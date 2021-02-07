@@ -1,6 +1,6 @@
 {
     "name": "whatsapp-discord",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": "Simple WhatsApp -> Discord relay.",
     "keywords": [
         "whatsapp",
@@ -24,7 +24,8 @@
         "discord.js": ">=12.4.1",
         "file-type": ">=16.0.1",
         "qrcode-terminal": ">=0.12.0",
-        "whatsapp-web.js": ">=1.11.0"
+        "queue": ">=6.0.2",
+        "whatsapp-web.js": ">=1.12.1"
     },
     "devDependencies": {
         "eslint": ">=7.13.0"

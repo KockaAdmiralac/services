@@ -13,8 +13,13 @@ const fs = require('fs'),
       FileType = require('file-type'),
       {Client} = require('whatsapp-web.js'),
       qrcode = require('qrcode-terminal'),
+      queue = require('queue'),
+      Cache = require('./cache.js'),
+      util = require('./util.js'),
       Twinkle = require('../util/twinkle.js'),
+      SIBaza = require('../util/si-db.js'),
       config = require('./config.json');
+const Group = require('./group.js');
 
 /**
  * Constants.
@@ -47,53 +52,54 @@ class WhatsAppDiscord {
      * Class constructor.
      */
     constructor() {
-        this.initQueue();
+        if (config.si) {
+            this.db = new SIBaza(config.si);
+        }
+        this.queue = queue({
+            autostart: true,
+            concurrency: 1
+        });
         this.initWebhooks();
-        this.initCache();
+        this.cache = new Cache();
+        this.cache.on('error', this.cacheError.bind(this));
         this.initClient();
-    }
-    /**
-     * Initializes message queuing.
-     * @todo Move the queue to a separate class
-     */
-    initQueue() {
-        this.queue = [];
-        this.currentlyProcessing = false;
-        this.lastMessageInQueue = null;
-        this.queueCheckInterval = setInterval(
-            this.queueCheck.bind(this),
-            60000
-        );
     }
     /**
      * Initializes Discord webhook clients for each group.
      */
     initWebhooks() {
         if (config.reporting) {
-            this.reporting = new WebhookClient(
-                config.reporting.id,
-                config.reporting.token
-            );
+            const {id, token} = config.reporting;
+            this.reporting = new WebhookClient(id, token);
         }
-        for (const group of config.groups) {
-            group.webhook = new WebhookClient(
-                group.webhookId,
-                group.webhookToken
-            );
-            if (group.socket && group.groupId) {
-                group.twinkle = new Twinkle(group.socket)
-                    .on('error', this.twinkleError.bind(this))
-                    .on('connected', this.twinkleConnected.bind(this))
-                    .on('disconnected', this.twinkleDisconnected.bind(this))
-                    .on('message', this.twinkleMessage.bind(this, group));
-            }
+        this.groups = config.groups.map(group => new Group(group));
+        this.groups.forEach(g => this.createTwinkle(g));
+    }
+    /**
+     * Creates a Twinkle IPC instance.
+     * @param {Group} group Group for which to create a Twinkle instance
+     */
+    createTwinkle(group) {
+        if (!group.socketPath) {
+            return;
         }
+        group.addTwinkle(
+            new Twinkle(group.socketPath)
+                .on('error', this.twinkleError.bind(this))
+                .on('connected', this.twinkleConnected.bind(this))
+                .on('disconnected', this.twinkleDisconnected.bind(this))
+                .on('message', this.twinkleMessage.bind(this, group))
+        );
     }
     /**
      * Handles Twinkle connection errors.
      * @param {Error} error Twinkle connection error that occurred
      */
     async twinkleError(error) {
+        if (error.code === 'ENOENT' || error.code === 'ECONNREFUSED') {
+            // We will already know a disconnection happened.
+            return;
+        }
         await this.report('Twinkle connection error:', error);
     }
     /**
@@ -113,7 +119,9 @@ class WhatsAppDiscord {
      * @param {object} group Group information
      * @param {object} message Twinkle message object
      */
-    async twinkleMessage(group, {message, member}) {
+    async twinkleMessage(group, {
+        attachments, message, member, mentions, reference
+    }) {
         if (
             Date.now() - message.createdTimestamp > 5000 ||
             message.channelID !== group.channelId ||
@@ -122,26 +130,54 @@ class WhatsAppDiscord {
         ) {
             return;
         }
-        const chat = await this.client.getChatById(group.groupId);
-        await chat.sendMessage(`*${member.displayName}* _(Discord)_:\n${message.content}`);
+        const chat = await this.client.getChatById(group.id),
+              mentioned = [],
+              mentionMap = {};
+        for (const userId of mentions.users) {
+            const student = await this.db.getStudentByDiscordID(userId);
+            if (!student) {
+                continue;
+            }
+            for (const phoneNumber of student.phoneNumbers) {
+                const contact = await this.client.getContactById(`${phoneNumber}@c.us`);
+                if (contact) {
+                    mentioned.push(contact);
+                    if (!mentionMap[userId]) {
+                        mentionMap[userId] = [];
+                    }
+                    mentionMap[userId].push(phoneNumber);
+                }
+            }
+        }
+        const content = util.discordToWhatsApp(
+            message,
+            member,
+            attachments,
+            mentionMap
+        );
+        let quotedMessageId = null;
+        if (reference) {
+            quotedMessageId = this.cache.getWhatsApp(reference.messageID);
+        }
+        const sentMessage = await chat.sendMessage(content, {
+            mentions: mentioned,
+            quotedMessageId
+        });
+        this.cache.add(sentMessage.id._serialized, message.id);
     }
     /**
-     * Initializes message cache.
+     * Emitted when an error while saving cache occurs.
+     * @param {Error} error The error that occurred
      */
-    initCache() {
-        try {
-            this.cache = require('./cache.json');
-        } catch (error) {
-            this.cache = {};
-        }
-        this.cacheInterval = setInterval(this.saveCache.bind(this), 5000);
+    async cacheError(error) {
+        await this.report('An error occurred while saving cache', error);
     }
     /**
      * Initializes the WhatsApp Web client.
      */
     initClient() {
         this.client = new Client({
-            session: this.cache && this.cache._session
+            session: this.cache.session
         });
         for (const event of EVENTS) {
             this.client.on(event, this[
@@ -157,8 +193,8 @@ class WhatsAppDiscord {
     async authFailure(message) {
         await this.report(`AUTHENTICATION FAILURE: ${message}`);
         // Clear authentication data.
-        delete this.cache._session;
-        await this.saveCache();
+        this.cache.session = null;
+        await this.cache.save();
         // Restart client.
         await this.report('Destroying client...');
         this.isReady = false;
@@ -172,7 +208,7 @@ class WhatsAppDiscord {
      */
     async authenticated(session) {
         await this.report('Authenticated to WhatsApp.');
-        this.cache._session = session;
+        this.cache.session = session;
     }
     /**
      * Emitted when the battery percentage for the attached device changes.
@@ -301,47 +337,52 @@ class WhatsAppDiscord {
      * Emitted when a new message is received.
      * @param {Message} message The message that was received
      */
-    async message(message) {
+    message(message) {
         if (message.fromMe || this.killing) {
             return;
         }
-        if (this.currentlyProcessing) {
-            // The queue is not empty, wait.
-            console.debug('Current queue length:', this.queue.length);
-            this.queue.push(message);
-            return;
-        }
-        // Lock the resources.
-        this.currentlyProcessing = true;
-        for (const group of config.groups) {
-            if (group.groupId && message.from !== group.groupId) {
+        for (const group of this.groups) {
+            if (group.id && message.from !== group.id) {
                 continue;
             }
-            try {
-                const contact = await message.getContact(),
-                      options = {
-                        allowedMentions: {
-                            parse: ['roles', 'users']
-                        },
-                        avatarURL: await contact.getProfilePicUrl(),
-                        username: this.formatUsername(
-                            contact.pushname,
-                            contact.number,
-                            group.callNumber
-                        )
-                    };
-                await this.handleQuotedMessage(message, group, options);
-                await this.handleMediaMessage(message, options);
-                if (message.hasMedia || message.body) {
-                    await this.relayMessage(message, group, options);
-                }
-                await (await message.getChat()).sendSeen();
-            } catch (error) {
-                await this.report('Unknown error when relaying message', error);
-            }
+            this.queue.push(util.safeAsync(
+                () => this.process(message, group),
+                error => this.report('Error while relaying message', error)
+            ));
             break;
         }
-        await this.popQueue();
+    }
+    /**
+     * Processes a WhatsApp message in a specific group.
+     * @param {Message} message Message to process
+     * @param {Group} group Group to which the message was sent
+     */
+    async process(message, group) {
+        const contact = await message.getContact(),
+              options = {
+            allowedMentions: {
+                parse: ['users']
+            },
+            avatarURL: await contact.getProfilePicUrl(),
+            username: util.formatUsername(
+                contact.pushname,
+                contact.number,
+                group.callNumber,
+                this.db ?
+                    await this.db.getStudentByPhone(contact.number) :
+                    null
+            )
+        };
+        if (message.hasQuotedMsg) {
+            await this.handleQuotedMessage(message, group, options);
+        }
+        if (message.hasMedia) {
+            await this.handleMediaMessage(message, options);
+        }
+        if (message.hasMedia || message.body) {
+            await this.relayMessage(message, group, options);
+        }
+        await (await message.getChat()).sendSeen();
     }
     /**
      * Sends an embed right before a message that quoted another message.
@@ -350,25 +391,25 @@ class WhatsAppDiscord {
      * @param {object} options Discord webhook options
      */
     async handleQuotedMessage(message, group, options) {
-        if (!message.hasQuotedMsg) {
-            return;
-        }
         const quoted = await message.getQuotedMessage(),
-              quotedContact = await quoted.getContact();
-        await group.webhook.send('', {
+              quotedContact = await quoted.getContact(),
+              msg = await group.send('', {
             ...options,
             embeds: [{
-                description: this.getQuotedMessageContents(
-                    quoted,
-                    group
-                ),
-                title: this.formatUsername(
-                    quotedContact.pushname,
-                    quotedContact.number,
-                    group.callNumber
-                )
+                description: await this.getQuotedMessageContents(quoted, group),
+                title: quotedContact.number === config.number ?
+                    'You' :
+                    util.formatUsername(
+                        quotedContact.pushname,
+                        quotedContact.number,
+                        group.callNumber,
+                        this.db ? await this.db.getStudentByPhone(
+                            quotedContact.number
+                        ) : null
+                    )
             }]
         });
+        this.cache.add(message.id._serialized, msg.id);
     }
     /**
      * Modifies Discord webhook options to add files that were sent along with
@@ -377,9 +418,6 @@ class WhatsAppDiscord {
      * @param {object} options Discord webhook options to be modified
      */
     async handleMediaMessage(message, options) {
-        if (!message.hasMedia) {
-            return;
-        }
         let media = null;
         for (let i = 0; i < 3; ++i) {
             try {
@@ -409,13 +447,10 @@ class WhatsAppDiscord {
      * @param {object} options Discord webhook options
      */
     async relayMessage(message, group, options) {
-        if (!message.hasMedia && !message.body) {
-            return;
-        }
         let msg = null;
         try {
-            msg = await group.webhook.send(
-                this.trimMessage(message.body),
+            msg = await group.send(
+                await this.formatWhatsApp(message.body),
                 options
             );
         } catch (error) {
@@ -432,7 +467,7 @@ class WhatsAppDiscord {
                         description: 'The file exceeded Discord\'s file size limit. Please visit the WhatsApp group to view the file.',
                         title: `Attachment ${title} failed to send!`
                     }];
-                    await group.webhook.send(message.body, options);
+                    await group.send(message.body, options);
                 } catch (anotherError) {
                     await this.report(
                         'Retried upload failed to send',
@@ -444,7 +479,7 @@ class WhatsAppDiscord {
             }
         }
         if (msg && msg.id) {
-            this.cache[message.id.id] = msg.id;
+            this.cache.add(message.id._serialized, msg.id);
         }
     }
     /**
@@ -456,7 +491,7 @@ class WhatsAppDiscord {
         console.info(
             new Date(),
             'Message',
-            message.id.id,
+            message.id._serialized,
             'in',
             message.from,
             ack === 1 ?
@@ -476,7 +511,7 @@ class WhatsAppDiscord {
             console.info(
                 new Date(),
                 'Message',
-                oldMessage.id.id,
+                oldMessage.id._serialized,
                 'in',
                 oldMessage.from,
                 'was deleted.'
@@ -485,7 +520,7 @@ class WhatsAppDiscord {
             console.info(
                 new Date(),
                 'Message',
-                revokedMessage.id.id,
+                revokedMessage.id._serialized,
                 'in',
                 revokedMessage.from,
                 'was deleted.'
@@ -529,75 +564,46 @@ class WhatsAppDiscord {
         this.client.initialize();
     }
     /**
-     * Formats a valid Discord webhook username so that it doesn't exceed 32
-     * characters.
-     * @param {string} name User's name
-     * @param {string} number User's phone number
-     * @param {string} callNumber Default call number
-     * @returns {string} Discord webhook username of valid length
-     */
-    formatUsername(name, number, callNumber) {
-        const normalizedNumber = callNumber && number.startsWith(callNumber) ?
-            `0${number.slice(callNumber.length)}` :
-            `+${number}`;
-        if (!name) {
-            if (normalizedNumber.length > 32) {
-                return `${normalizedNumber.slice(0, 31)}…`;
-            }
-            return normalizedNumber;
-        }
-        if (name.length > 32) {
-            return `${name.slice(0, 31)}…`;
-        } else if (name.length + 5 > 32) {
-            // Minimum: Name Surname (0*)
-            return name;
-        } else if (name.length + normalizedNumber.length + 3 > 32) {
-            const length = 32 - name.length - 4;
-            return `${name} (${normalizedNumber.slice(0, length)}…)`;
-        }
-        return `${name} (${normalizedNumber})`;
-    }
-    /**
-     * Trims a message to fit into the Discord message size limit (2000).
-     *
-     * The message is trimmed to 1901 characters as message quoting may add
-     * a link to the bottom of the quote embed (embed size limit is 2048).
-     * @param {string} message Message to trim
-     * @returns {string} Trimmed message
-     */
-    trimMessage(message) {
-        if (message.length < 1900) {
-            return message;
-        }
-        return `${message.slice(0, 1900)}…`;
-    }
-    /**
      * Gets contents of the message quote embed for relaying to Discord.
      * @param {Message} quoted Quoted message
      * @param {object} group Group configuration
      * @returns {string} Contents of the message quote embed
      */
-    getQuotedMessageContents(quoted, group) {
+    async getQuotedMessageContents(quoted, group) {
         const message = quoted.body ?
-                  this.trimMessage(quoted.body) :
+                  await this.formatWhatsApp(quoted.body) :
                   quoted.type,
-              url = this.cache[quoted.id.id] ?
-                  `**[View message](https://discord.com/channels/${group.guildId}/${group.channelId}/${this.cache[quoted.id.id]})**` :
+              messageId = this.cache.getDiscord(quoted.id.id),
+              url = messageId ?
+                  `**[View message](${group.messageURL(messageId)})**` :
                   '';
         return `${message}\n${url}`;
     }
     /**
-     * Saves the cache.
+     * Converts mentions from a WhatsApp message and applies formatting changes.
+     * @param {string} content WhatsApp message contents
+     * @returns {string} Formatted Discord message
      */
-    async saveCache() {
-        try {
-            await fs.promises.writeFile(
-                'cache.json',
-                JSON.stringify(this.cache)
-            );
-        } catch (error) {
-            await this.report('An error occurred while saving cache:', error);
+    async formatWhatsApp(content) {
+        const students = {},
+              mentions = content.match(/@(\d+)/g);
+        if (this.db && mentions) {
+            for (const match of mentions) {
+                const number = match.substring(1);
+                if (!students[number]) {
+                    students[number] = await this.db.getStudentByPhone(number);
+                }
+            }
         }
+        return util.trimMessage(content.replace(
+            /@(\d+)/g,
+            (full, match) => (students[match] ?
+                `<@${students[match].discordID}>` :
+                full)
+        )
+        .replace(/\*(.*?)\*/g, '**$1**')
+        .replace(/~(.*?)~/g, '~~$1~~')
+        .replace(/```([^\n`]+)```/g, '`$1`'));
     }
     /**
      * Ends the relay.
@@ -605,18 +611,14 @@ class WhatsAppDiscord {
     async kill() {
         await this.report('Killing client...');
         this.killing = true;
-        this.queue = [];
         try {
             this.isReady = false;
             await this.client.destroy();
         } catch (error) {
             console.error('An error occurred while killing the client:', error);
         }
-        for (const group of config.groups) {
-            group.webhook.destroy();
-            if (group.twinkle) {
-                group.twinkle.disconnect();
-            }
+        for (const group of this.groups) {
+            group.destroy();
         }
         if (this.reporting) {
             this.reporting.destroy();
@@ -624,31 +626,7 @@ class WhatsAppDiscord {
         if (this.pingInterval) {
             clearInterval(this.pingInterval);
         }
-        clearInterval(this.cacheInterval);
-        clearInterval(this.queueCheckInterval);
-    }
-    /**
-     * Unlocks the resources and processes the next message in queue.
-     */
-    async popQueue() {
-        this.currentlyProcessing = false;
-        if (this.queue.length) {
-            await this.message(this.queue.shift());
-        }
-    }
-    /**
-     * Forwards the queue if it has been stuck on the last message.
-     */
-    async queueCheck() {
-        if (this.queue.length === 0) {
-            this.lastMessageInQueue = null;
-            return;
-        }
-        if (this.lastMessageInQueue === this.queue[0]) {
-            await this.report('Forwarding queue...');
-            await this.popQueue();
-        }
-        this.lastMessageInQueue = this.queue[0];
+        this.cache.destroy();
     }
     /**
      * Reports a message to Discord if configured.
