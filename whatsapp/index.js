@@ -15,11 +15,11 @@ const fs = require('fs'),
       qrcode = require('qrcode-terminal'),
       queue = require('queue'),
       Cache = require('./cache.js'),
+      Group = require('./group.js'),
       util = require('./util.js'),
       Twinkle = require('../util/twinkle.js'),
       SIBaza = require('../util/si-db.js'),
       config = require('./config.json');
-const Group = require('./group.js');
 
 /**
  * Constants.
