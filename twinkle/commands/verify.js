@@ -46,6 +46,9 @@ class VerifyCommand extends Command {
             const response = await got(`https://services.fandom.com/user-attribute/user/${userId}/attr/discordHandle`, {
                 headers: {
                     accept: '*/*'
+                },
+                searchParams: {
+                    cb: Date.now()
                 }
             }).json();
             return response.value;
