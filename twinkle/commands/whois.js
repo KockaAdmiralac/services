@@ -6,14 +6,14 @@
 'use strict';
 
 const twinklePath = process.argv[2],
-      Command = require(`${twinklePath}/src/plugins/commander/structs/Command.js`),
+      ModCommand = require(`${twinklePath}/src/plugins/commander/structs/ModCommand.js`),
       SIBaza = require('../../util/si-db.js');
 
 const INDEX_REGEX = /^(\d+)\/(\d+)$/,
       NAME_REGEX = /^(\S+) (\S+)$/,
       SNOWFLAKE_REGEX = /^<?@?!?(\d+)>?$/;
 
-class WhoisCommand extends Command {
+class WhoisCommand extends ModCommand {
     constructor(bot) {
         super(bot);
         this.aliases = ['whois', 'koje'];
