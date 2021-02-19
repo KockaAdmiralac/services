@@ -84,6 +84,15 @@ class SIBaza {
             [phone, firstName, lastName]
         );
     }
+    async getRolesForUser(discordID) {
+        return (await this.db.execute(
+            'SELECT CAST(r.`role_id` AS VARCHAR(255)) AS `role_id` ' +
+            'FROM `roles` r ' +
+            'JOIN `students` s ON s.`index` = r.`index` AND s.`year` = r.`year` ' +
+            'WHERE s.`discord_id` = ?',
+            [discordID]
+        ))[0].map(row => row.role_id);
+    }
 }
 
 module.exports = SIBaza;
