@@ -573,7 +573,7 @@ class WhatsAppDiscord {
         const message = quoted.body ?
                   await this.formatWhatsApp(quoted.body) :
                   quoted.type,
-              messageId = this.cache.getDiscord(quoted.id.id),
+              messageId = this.cache.getDiscord(quoted.id._serialized),
               url = messageId ?
                   `**[View message](${group.messageURL(messageId)})**` :
                   '';
