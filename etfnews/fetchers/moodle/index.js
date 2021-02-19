@@ -19,7 +19,7 @@ const Fetcher = require('..'),
  * Fetches content of a Moodle course.
  * @augments Fetcher
  */
-class BasicFetcher extends Fetcher {
+class MoodleFetcher extends Fetcher {
     /**
      * Class constructor. Initializes the HTTP client.
      * @param {object} config Fetcher configuration
@@ -93,4 +93,4 @@ class BasicFetcher extends Fetcher {
     }
 }
 
-module.exports = BasicFetcher;
+module.exports = MoodleFetcher;
