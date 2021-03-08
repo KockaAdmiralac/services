@@ -13,7 +13,7 @@ class Database {
         });
     }
     async addUser(discordId, fandomId) {
-        if (await this.getUser(discordId) === fandomId) {
+        if ((await this.getUserByDiscordId(discordId)).includes(fandomId)) {
             return false;
         }
         await this.db.execute(
@@ -22,14 +22,24 @@ class Database {
         );
         return true;
     }
-    async getUser(discordId) {
-        const row = (await this.db.execute(
+    async getUserByDiscordId(discordId) {
+        return (await this.db.execute(
             'SELECT `fandom_id` FROM `discord_fandom_mapping` WHERE `discord_id` = ?',
             [discordId]
-        ))[0][0];
-        if (row) {
-            return row.fandom_id;
-        }
+        ))[0].map(row => row.fandom_id);
+    }
+    async getUserByFandomId(fandomId) {
+        return (await this.db.execute(
+            'SELECT CAST(`discord_id` AS VARCHAR(255)) AS `discord_id` FROM `discord_fandom_mapping` WHERE `fandom_id` = ?',
+            [fandomId]
+        ))[0].map(row => row.discord_id);
+    }
+    async getUsersByFandomIds(fandomIds) {
+        return (await this.db.execute(
+            'SELECT CAST(`discord_id` AS VARCHAR(255)) AS `discord_id` FROM `discord_fandom_mapping` WHERE ' +
+            fandomIds.map(() => '`fandom_id` = ?').join(' OR '),
+            fandomIds
+        ))[0].map(row => row.discord_id);
     }
 }
 

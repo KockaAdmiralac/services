@@ -3,6 +3,8 @@
  *
  * A modification of the !member command, more suited for use on wikis with
  * gated verification channels.
+ *
+ * Undertale Wiki (https://ut.wikia.com) is currently hardcoded.
  */
 const twinklePath = process.argv[2],
       Command = require(`${twinklePath}/src/plugins/commander/structs/Command.js`),
@@ -70,6 +72,16 @@ class VerifyCommand extends Command {
         });
     }
 
+    verificationStep(message, description) {
+        return message.channel.send({
+            embed: {
+                color: 0x00FF00,
+                description,
+                title: 'One More Step'
+            }
+        });
+    }
+
     async call(message, content) {
         // Only allow verification from the verification channel
         if (this.bot.welcome && this.bot.welcome.config.CHANNEL !== message.channel.id) {
@@ -99,13 +111,22 @@ class VerifyCommand extends Command {
         const discordTag = await this.getMastheadDiscord(userId),
               verificationLink = `https://undertale.fandom.com/wiki/Special:VerifyUser/${encodeURIComponent(username)}?user=${encodeURIComponent(message.author.username)}&tag=${message.author.discriminator}&ch=post_your_username_here`;
         if (!discordTag) {
-            return this.verificationError(message, `The user ${username} does not have their username set in their profile masthead. Please set it [here](<${verificationLink}>) and re-run this command.`);
+            return this.verificationStep(message, `The user ${username} does not have their username set in their profile masthead. Please set it [here](<${verificationLink}>) and re-run this command.`);
         }
         if (discordTag.trim() !== message.author.tag) {
-            return this.verificationError(message, `The username and tag in the masthead do not match the username and tag of the message author. Click [here](<${verificationLink}>) to remedy this.`);
+            return this.verificationStep(message, `The username and tag in the masthead do not match the username and tag of the message author. Click [here](<${verificationLink}>) to remedy this.`);
         }
 
         if (this.bot.welcome) {
+            if (await this.bot.welcome.isBlockedFromWiki(userId)) {
+                return this.verificationError(message, 'Your account is currently blocked from the wiki.');
+            }
+            if (await this.bot.welcome.isBannedFromServer([userId], message.guild)) {
+                await this.bot.welcome.db.addUser(message.author.id, userId);
+                return message.member.ban({
+                    reason: 'Verified with an account that was previously banned from the server.'
+                });
+            }
             await message.member.roles.add(this.bot.welcome.config.ROLE);
             if (!await this.bot.welcome.db.addUser(message.author.id, userId)) {
                 // User already exists in database
