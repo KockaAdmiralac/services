@@ -123,6 +123,7 @@ class VerifyCommand extends Command {
             }
             if (await this.bot.welcome.isBannedFromServer([userId], message.guild)) {
                 await this.bot.welcome.db.addUser(message.author.id, userId);
+                await this.bot.welcome.reportBan(message.member, [userId]);
                 return message.member.ban({
                     reason: 'Verified with an account that was previously banned from the server.'
                 });

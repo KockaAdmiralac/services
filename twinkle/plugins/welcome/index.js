@@ -68,6 +68,13 @@ class Welcome {
         return false;
     }
 
+    async reportBan(member, fandomIds) {
+        if (this.config.NOTIFY_BAN) {
+            const channel = await member.guild.channels.cache.get(this.config.NOTIFY_BAN);
+            await channel.send(`Banning <@${member.id}> as they are associated with Fandom accounts that were banned from the server (${fandomIds.join(', ')}).`);
+        }
+    }
+
     async onJoin(member) {
         const fandomIds = await this.db.getUserByDiscordId(member.user.id);
         const channel = member.guild.channels.cache.get(this.config.CHANNEL);
@@ -75,6 +82,7 @@ class Welcome {
             // User already verified
             if (await this.isBannedFromServer(fandomIds, member.guild)) {
                 // User was banned from the server on another account
+                await this.reportBan(member, fandomIds);
                 return member.ban({
                     reason: 'Verified with an account that was previously banned from the server.'
                 });
