@@ -1,27 +1,19 @@
 {
-    "name": "twinkle-kocka",
+    "name": "kocka-services-util",
     "version": "1.0.0",
-    "description": "Modifications to the Twinkle Discord bot.",
-    "keywords": [
-        "discord"
-    ],
+    "description": "Utilities for my personal services.",
     "license": "CC-BY-SA-4.0",
     "author": {
         "name": "KockaAdmiralac",
         "email": "git@kocka.tech",
         "url": "https://kocka.tech"
     },
-    "main": "main.js",
-    "scripts": {
-        "start": "node main.js"
-    },
     "repository": {
         "type": "git",
         "url": "https://github.com/KockaAdmiralac/services.git"
     },
     "dependencies": {
-        "discord.js": ">=12.5.1",
-        "got": ">=11.8.2",
         "mysql2": ">=2.2.5"
-    }
+    },
+    "private": true
 }

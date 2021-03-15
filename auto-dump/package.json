@@ -20,7 +20,7 @@
         "url": "https://github.com/KockaAdmiralac/services.git"
     },
     "dependencies": {
-        "got": ">=11.6.2",
+        "got": ">=11.8.2",
         "tough-cookie": ">=4.0.0"
     }
 }
