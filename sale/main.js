@@ -1,3 +1,4 @@
+#!/usr/bin/env node --tls-min-v1.0 --tls-cipher-list="AES128-SHA"
 import got from 'got';
 import {WebhookClient} from 'discord.js';
 import {readFile, writeFile} from 'fs/promises';
