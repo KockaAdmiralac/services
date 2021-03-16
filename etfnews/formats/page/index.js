@@ -93,13 +93,13 @@ class PageFormat extends Format {
         }
         const href = node.attrs.href;
         if (href.startsWith('http://') || href.startsWith('https://')) {
-            return `[${node.md}](${href})`;
+            return `[${node.md}](${encodeURI(href)})`;
         }
         if (href.startsWith('mailto:')) {
             return node.md;
         }
         if (href.startsWith('/')) {
-            return `[${node.md}](${url.origin}${href})`;
+            return `[${node.md}](${url.origin}${encodeURI(href)})`;
         }
         return `[${node.md}](${url.origin}${
             url.pathname.replace(/\/([^\/]+)$/, '/')
