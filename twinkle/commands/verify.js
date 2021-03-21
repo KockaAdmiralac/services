@@ -109,7 +109,7 @@ class VerifyCommand extends Command {
         }
 
         const discordTag = await this.getMastheadDiscord(userId),
-              verificationLink = `https://undertale.fandom.com/wiki/Special:VerifyUser/${encodeURIComponent(username)}?user=${encodeURIComponent(message.author.username)}&tag=${message.author.discriminator}&ch=post_your_username_here`;
+              verificationLink = `https://undertale.fandom.com/wiki/Special:VerifyUser/${encodeURIComponent(username)}?user=${encodeURIComponent(message.author.username)}&tag=${message.author.discriminator}`;
         if (!discordTag) {
             return this.verificationStep(message, `The user ${username} does not have their username set in their profile masthead. Please set it [here](<${verificationLink}>) and re-run this command.`);
         }
