@@ -80,8 +80,15 @@ class MoodleFetcher extends Fetcher {
                 if (retried) {
                     throw new Error('Login to Moodle unsuccessful!');
                 } else {
-                    await this.login();
-                    console.info(new Date(), 'Logged in.');
+                    const resetLogin = !this._loginPromise;
+                    if (resetLogin) {
+                        this._loginPromise = this.login();
+                    }
+                    await this._loginPromise;
+                    if (resetLogin) {
+                        delete this._loginPromise;
+                    }
+                    console.info(new Date(), 'Login procedure finished executing.');
                     return this.fetch(url, true);
                 }
             }
