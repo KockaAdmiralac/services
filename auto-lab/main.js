@@ -1,4 +1,4 @@
-#!/usr/bin/env node --tls-min-v1.0 --tls-cipher-list="AES128-SHA"
+#!/usr/bin/env node
 /**
  * main.js
  *

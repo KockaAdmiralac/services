@@ -14,7 +14,7 @@
     },
     "main": "main.js",
     "scripts": {
-        "start": "node --tls-min-v1.0 --tls-cipher-list=\"AES128-SHA\" main.js"
+        "start": "node main.js"
     },
     "repository": {
         "type": "git",
