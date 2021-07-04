@@ -3,6 +3,9 @@ etfnews/hist
 etfnews/main.pid
 gopiratesoftware/keys
 github/cache.json
+whatsapp/monitoring-failed
+whatsapp/monitoring.log
+whatsapp/monitoring.txt
 whatsapp/page.png
 whatsapp/qr.png
 **/cache.json
