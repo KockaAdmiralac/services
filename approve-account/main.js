@@ -33,7 +33,8 @@ databasePool = mysql.createPool({
 }), QUERY = 'SELECT `acr_email`, `acr_id`, `acr_name`, `acr_real_name` FROM `account_requests` ' +
             'WHERE `acr_email_authenticated` IS NOT NULL AND ' +
             '`acr_deleted` = 0 AND ' +
-            '`acr_email` LIKE ?'
+            '`acr_email` LIKE ? AND ' +
+            'NOT EXISTS (SELECT `user_id` FROM `user` WHERE `acr_email` = `user_email`)';
 
 /**
  * Global variables.
