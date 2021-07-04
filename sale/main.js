@@ -88,7 +88,7 @@ async function getAllReserved() {
     return reserved;
 }
 
-async function recheck() {
+async function recheck(first) {
     try {
         const embeds = [];
         for (const reservation of await getAllReserved()) {
@@ -111,7 +111,7 @@ async function recheck() {
                 encoding: 'utf-8'
             });
         }
-        while (embeds.length) {
+        while (embeds.length && !first) {
             await webhook.send('', {
                 embeds: embeds.splice(0, 10)
             });
@@ -131,7 +131,7 @@ async function main() {
     reservations = new Set(await readJSON('cache.json') || []);
     interval = setInterval(recheck, INTERVAL);
     await report('Service started.');
-    await recheck();
+    await recheck(true);
 }
 
 async function kill() {
