@@ -1,7 +1,7 @@
 {
-    "name": "auto-dump",
-    "version": "1.0.2",
-    "description": "Periodically requests database dumps on configured Fandom wikis.",
+    "name": "fandom-cron",
+    "version": "1.1.0",
+    "description": "Cron jobs executing maintenance on Fandom wikis.",
     "keywords": [
         "fandom"
     ],
@@ -13,7 +13,7 @@
     },
     "main": "main.js",
     "scripts": {
-        "start": "node main.js"
+        "dump": "node dump.js"
     },
     "repository": {
         "type": "git",
@@ -21,6 +21,8 @@
     },
     "dependencies": {
         "got": ">=11.8.2",
+        "node-html-parser": ">=4.1.2",
         "tough-cookie": ">=4.0.0"
-    }
+    },
+    "type": "module"
 }
