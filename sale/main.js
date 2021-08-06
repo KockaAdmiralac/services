@@ -34,7 +34,9 @@ async function readJSON(path) {
 async function report(text, error) {
     console.info(new Date(), text, error);
     try {
-        await webhook.send(text);
+        await webhook.send({
+            content: text
+        });
     } catch (discordError) {
         console.info(new Date(), 'Error while relaying:', discordError);
     }
@@ -112,7 +114,7 @@ async function recheck(first) {
             });
         }
         while (embeds.length && !first) {
-            await webhook.send('', {
+            await webhook.send({
                 embeds: embeds.splice(0, 10)
             });
         }
@@ -127,7 +129,8 @@ async function main() {
         console.error('No configuration present, exiting.');
         return;
     }
-    webhook = new WebhookClient(config.id, config.token);
+    const {id, token} = config;
+    webhook = new WebhookClient({id, token});
     reservations = new Set(await readJSON('cache.json') || []);
     interval = setInterval(recheck, INTERVAL);
     await report('Service started.');
