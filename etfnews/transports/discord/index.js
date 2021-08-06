@@ -24,7 +24,7 @@ class DiscordTransport extends Transport {
      */
     constructor(config) {
         super(config);
-        this._webhook = new WebhookClient(config.id, config.token);
+        this._webhook = new WebhookClient(config);
     }
     /**
      * Transports formatted content to Discord.
@@ -32,7 +32,11 @@ class DiscordTransport extends Transport {
      *                               formatter to be transported.
      */
     async transport(formattedContent) {
-        await this._webhook.send(formattedContent.content, formattedContent.options);
+        const options = formattedContent.options;
+        if (formattedContent.content) {
+            options.content = formattedContent.content;
+        }
+        await this._webhook.send(options);
     }
     /**
      * Cleans up the transport's resources, in this case, the Discord webhook,
