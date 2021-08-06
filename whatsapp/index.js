@@ -69,8 +69,7 @@ class WhatsAppDiscord {
      */
     initWebhooks() {
         if (config.reporting) {
-            const {id, token} = config.reporting;
-            this.reporting = new WebhookClient(id, token);
+            this.reporting = new WebhookClient(config.reporting);
         }
         this.groups = config.groups.map(group => new Group(group));
         this.groups.forEach(g => this.createTwinkle(g));
@@ -643,7 +642,9 @@ class WhatsAppDiscord {
             if (newMessage.length === 0) {
                 newMessage = '<empty message>';
             }
-            await this.reporting.send(newMessage);
+            await this.reporting.send({
+                content: newMessage
+            });
         }
     }
     /**

@@ -24,7 +24,10 @@ class Group {
         this.channelId = config.channelId;
         this.guildId = config.guildId;
         this.socketPath = config.socket;
-        this.webhook = new WebhookClient(config.webhookId, config.webhookToken);
+        this.webhook = new WebhookClient({
+            id: config.webhookId,
+            token: config.webhookToken
+        });
     }
     /**
      * Adds a Twinkle instance to the group.
@@ -48,7 +51,11 @@ class Group {
      * @returns {Message} Discord message object
      */
     send(content, options) {
-        return this.webhook.send(content, options);
+        const sendOptions = {...options};
+        if (content) {
+            sendOptions.content = content;
+        }
+        return this.webhook.send(sendOptions);
     }
     /**
      * Deallocates resources used by a group so the process can cleanly exit.
