@@ -28,7 +28,7 @@ const http = got.extend({
     prefixUrl: 'https://rti.etf.bg.ac.rs/',
     resolveBodyOnly: true,
     retry: 0
-}), serviceWebhook = notifications ? new WebhookClient(notifications.id, notifications.token) : null,
+}), serviceWebhook = notifications ? new WebhookClient(notifications) : null,
     typeNameMap = {
         domaci: 'homework',
         labvezbe: 'lab'
@@ -37,7 +37,10 @@ const http = got.extend({
         autoSignup: config.autoSignup,
         regex: new RegExp(config.regex, 'u'),
         type: config.type,
-        webhook: new WebhookClient(config.id, config.token)
+        webhook: new WebhookClient({
+            id: config.id,
+            token: config.token
+        })
     }));
 let cache = null;
 
@@ -141,7 +144,9 @@ async function saveCache() {
 async function notify(text, error) {
     console.info(new Date(), text, error);
     if (serviceWebhook && text.length) {
-        await serviceWebhook.send(text);
+        await serviceWebhook.send({
+            content: text
+        });
     }
 }
 
@@ -160,7 +165,9 @@ async function recordLab({name, type}) {
             if (!relay.regex.exec(name) || relay.type !== type) {
                 continue;
             }
-            await relay.webhook.send(`New ${typeName}: [${name.replace(/_/g, ' ')}](<https://rti.etf.bg.ac.rs/${type}/?servis=${encodeURIComponent(name)}>)`);
+            await relay.webhook.send({
+                content: `New ${typeName}: [${name.replace(/_/g, ' ')}](<https://rti.etf.bg.ac.rs/${type}/?servis=${encodeURIComponent(name)}>)`
+            });
             if (!relay.autoSignup) {
                 continue;
             }
