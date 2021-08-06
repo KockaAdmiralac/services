@@ -1,162 +1,138 @@
 #!/usr/bin/env node
-/**
- * main.js
- *
- * Main module for the Twitch service.
- */
 'use strict';
 
-/**
- * Importing modules
- */
-const express = require('express'),
-      parser = require('body-parser'),
-      https = require('https'),
-      got = require('got'),
-      fsPromises = require('fs').promises,
-      config = require('./config.json'),
-      pkg = require('./package.json');
+import parser from 'body-parser';
+import express from 'express';
+import {readFile} from 'fs/promises';
+import got from 'got';
+import {dirname} from 'path';
+import {fileURLToPath} from 'url';
 
-/**
- * Service class.
- */
-class GoPirateSoftware {
-    /**
-     * Class constructor.
-     */
-    constructor() {
-        this._initConfig();
-        this._initServer();
-        this._online = null;
-        this._client = got.extend({
-            headers: {
-                'Client-ID': this._config.client,
-                //'User-Agent': `${pkg.name} v${pkg.version}: ${pkg.repository.url}`
-            },
-            method: 'GET',
-            prefixUrl: 'https://api.twitch.tv',
-            resolveBodyOnly: true,
-            responseType: 'json'
-        });
-        process.on('SIGINT', this._kill.bind(this));
-    }
-    /**
-     * Initializes the configuration.
-     */
-    _initConfig() {
-        try {
-            this._config = require('./config.json');
-        } catch (error) {
-            console.error(
-                'An error occurred while loading the configuration:',
-                error
-            );
-            process.exit(1);
-        }
-    }
-    /**
-     * Initializes the web server.
-     */
-    _initServer() {
-        this._app = express();
-        this._app.use(parser.json());
-        this._app.use(parser.urlencoded({
-            extended: true
+// Global state
+let online = null;
+let initialized = false;
+let interval;
+let timeout;
+let server;
+let client;
+let config;
+let token;
+
+async function readJSON(name) {
+    try {
+        return JSON.parse(await readFile(`${dirname(fileURLToPath(import.meta.url))}/${name}`, {
+            encoding: 'utf-8'
         }));
-        this._app.get('/', this._request.bind(this));
+    } catch (error) {
+        return null;
     }
-    /**
-     * Run the web server.
-     */
-    async run() {
-        this._check();
-        this._interval = setInterval(this._check.bind(this), config.interval);
-        const c = this._config;
-        if (c.cert && c.key) {
-            try {
-                this._server = https.createServer({
-                    cert: await fsPromises.readFile(c.cert, 'utf-8'),
-                    key: await fsPromises.readFile(c.key, 'utf-8')
-                }, this._app).listen(c.port, this._serverCallback.bind(this));
-            } catch (error) {
-                console.error('Failed to run the HTTPS server!', error);
-                process.exit();
+}
+
+async function refreshToken() {
+    try {
+        const {access_token, expires_in} = await client.post('https://id.twitch.tv/oauth2/token', {
+            searchParams: {
+                client_id: config.client,
+                client_secret: config.secret,
+                grant_type: 'client_credentials'
+            }
+        });
+        token = access_token;
+        let expiration = expires_in * 1000;
+        if (expiration >= 2**31) {
+            expiration = 2**31 - 1;
+        }
+        timeout = setTimeout(refreshToken, expiration);    
+    } catch (error) {
+        // We need to catch errors here since this is run in a `setTimeout`.
+        console.error('Error while refreshing token:', error);
+    }
+}
+
+async function check() {
+    try {
+        const data = await client.get('https://api.twitch.tv/helix/streams', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            searchParams: {
+                cb: Date.now(),
+                user_login: config.user
+            }
+        });
+        if (
+            typeof data === 'object' &&
+            data.data instanceof Array &&
+            typeof data.data[0] === 'object' &&
+            data.data[0].type === 'live'
+        ) {
+            online = data.data[0];
+        } else {
+            online = null;
+        }
+    } catch (error) {
+        if (error && error.response && error.response.statusCode) {
+            if (error.response.statusCode === 503) {
+                console.error(new Date(), 'Twitch API server error.');
+            } else {
+                console.error(new Date(), 'Unknown request error:', error.response.body);
             }
         } else {
-            this._server = this._app.listen(
-                c.port,
-                this._serverCallback.bind(this)
-            );
-        }
-    }
-    /**
-     * Return stream online information.
-     * @param {express.Request} request HTTP request interface
-     * @param {express.Response} response HTTP response interface
-     */
-    _request(request, response) {
-        response.header('Access-Control-Allow-Origin', '*')
-                .header(
-                    'Access-Control-Allow-Headers',
-                    'Origin, X-Requested-With, Content-Type, Accept'
-                )
-                .json(this._online);
-    }
-    /**
-     * Checks whether the stream is online.
-     */
-    async _check() {
-        try {
-            const data = await this._client('helix/streams', {
-                searchParams: {
-                    cb: Date.now(),
-                    user_login: this._config.user
-                }
-            });
-            if (
-                typeof data === 'object' &&
-                data.data instanceof Array &&
-                typeof data.data[0] === 'object' &&
-                data.data[0].type === 'live'
-            ) {
-                this._online = data.data[0];
-            } else {
-                this._online = null;
-            }
-        } catch (error) {
-            if (error && error.response && error.response.statusCode) {
-                if (error.response.statusCode === 503) {
-                    console.error(new Date(), 'Twitch API server error.');
-                } else {
-                    console.error(new Date(), 'Unknown request error:', error);
-                }
-            } else {
-                console.error(new Date(), 'Unknown error:', error);
-            }
-        }
-    }
-    /**
-     * Callback after the web server runs.
-     */
-    _serverCallback() {
-        console.info('The web server is running!');
-        this._initialized = true;
-    }
-    /**
-     * Cleans up the resources on SIGINT.
-     */
-    _kill() {
-        console.info('Web server shutting down...');
-        if (this._initialized) {
-            this._initialized = false;
-            this._server.close();
-        }
-        if (this._interval) {
-            clearInterval(this._interval);
-            delete this._interval;
+            console.error(new Date(), 'Unknown error:', error);
         }
     }
 }
 
-module.exports = new GoPirateSoftware();
-module.exports.run();
+function request(req, res) {
+    res
+        .header('Access-Control-Allow-Origin', '*')
+        .header(
+            'Access-Control-Allow-Headers',
+            'Origin, X-Requested-With, Content-Type, Accept'
+        )
+        .json(online);
+}
+
+function kill() {
+    console.info('Web server shutting down...');
+    if (initialized) {
+        initialized = false;
+        server.close();
+    }
+    if (interval) {
+        clearInterval(interval);
+    }
+    if (timeout) {
+        clearTimeout(timeout);
+    }
+}
+
+async function main() {
+    config = await readJSON('config.json');
+    const pkg = await readJSON('package.json');
+    client = got.extend({
+        headers: {
+            'Client-ID': config.client,
+            'User-Agent': `${pkg.name} v${pkg.version}: ${pkg.repository.url}`
+        },
+        method: 'GET',
+        resolveBodyOnly: true,
+        responseType: 'json'
+    });
+    await refreshToken();
+    await check();
+    interval = setInterval(check, config.interval);
+    const app = express();
+    app.use(parser.json());
+    app.use(parser.urlencoded({
+        extended: true
+    }));
+    app.get('/', request);
+    server = app.listen(config.port, function() {
+        console.info('Server is running.');
+        initialized = true;
+    });
+    process.on('SIGINT', kill);
+}
+
+main();

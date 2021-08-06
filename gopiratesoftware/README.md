@@ -13,6 +13,4 @@ Built for [Heartbound Wiki](https://heartbound.wiki)'s [Twitch widget](https://h
     - `user` represents the user whose data you're serving.
     - `interval` represents the number of milliseconds on which the channel data is re-fetched.
     - `port` represents the port on which the HTTP server will run.
-    - `key` represents the path to the key file used for serving over HTTPS.
-    - `cert` represents the path to the certificate file used for serving over HTTPS.
 - Run `npm` start to run the server.
