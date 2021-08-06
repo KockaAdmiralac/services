@@ -2,7 +2,9 @@
 'use strict';
 import got from 'got';
 import parser from 'node-html-parser';
+import {dirname} from 'path';
 import {CookieJar} from 'tough-cookie';
+import {fileURLToPath} from 'url';
 import {loginAllDomains, getContent, getEditToken, readJSON} from './util.js';
 
 const http = got.extend({
@@ -95,7 +97,7 @@ function edit(text, token) {
 
 async function init() {
     console.info('Started.');
-    const {username, password} = await readJSON('highlight.json');
+    const {username, password} = await readJSON(`${dirname(fileURLToPath(import.meta.url))}/highlight.json`);
     console.info('Logging in...');
     await loginAllDomains(username, password, http);
     console.info('Grabbing config and CSS contents...');

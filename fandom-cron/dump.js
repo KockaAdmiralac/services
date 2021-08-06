@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 import got from 'got';
+import {dirname} from 'path';
 import {CookieJar} from 'tough-cookie';
+import {fileURLToPath} from 'url';
 import {loginAllDomains, getEditToken, readJSON} from './util.js';
 
 const http = got.extend({
@@ -26,7 +28,7 @@ async function getDump(wiki, editToken) {
 
 async function init() {
     console.info('Started.');
-    const {username, password, wikis} = await readJSON('dump.json');
+    const {username, password, wikis} = await readJSON(`${dirname(fileURLToPath(import.meta.url))}/dump.json`);
     console.info('Logging in...');
     try {
         await loginAllDomains(username, password, http);
