@@ -21,7 +21,7 @@ const http = got.extend({
     prefixUrl: `${mediawiki.url}${mediawiki.script || ''}/`,
     resolveBodyOnly: true,
     retry: 0
-}), serviceNotification = new WebhookClient(discord.id, discord.token),
+}), serviceNotification = new WebhookClient(discord),
 databasePool = mysql.createPool({
     connectionLimit: 10,
     database: db.database,
@@ -49,7 +49,9 @@ let intervalId = null;
 async function notify(text, error) {
     console.info(new Date(), text, error);
     if (serviceNotification && text.length) {
-        await serviceNotification.send(text.slice(0, 2000));
+        await serviceNotification.send({
+            content: text.slice(0, 2000)
+        });
     }
 }
 

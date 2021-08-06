@@ -1,5 +1,5 @@
 {
-    "name": "auto-dump",
+    "name": "approve-account",
     "version": "0.0.1",
     "description": "Automatically approves account requests made through the ConfirmAccount extension based on their email address.",
     "keywords": [
@@ -20,9 +20,12 @@
         "url": "https://github.com/KockaAdmiralac/services.git"
     },
     "dependencies": {
-        "discord.js": ">=12.5.1",
+        "discord.js": ">=13.0.0",
         "got": ">=11.8.2",
-        "mysql2": ">=2.2.5",
+        "mysql2": ">=2.3.0",
         "tough-cookie": ">=4.0.0"
+    },
+    "engines": {
+        "node": ">=16"
     }
 }
