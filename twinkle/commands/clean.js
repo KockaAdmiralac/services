@@ -5,8 +5,8 @@
  * reads the default "first message" in a channel and clears everything below
  * that message.
  */
-const twinklePath = process.argv[2],
-      ClearCommand = require(`${twinklePath}/src/plugins/commander/commands/clear.js`);
+const twinklePath = process.argv[2];
+const ClearCommand = require(`${twinklePath}/src/plugins/commander/commands/clear.js`);
 
 class CleanCommand extends ClearCommand {
     async call(message, content) {

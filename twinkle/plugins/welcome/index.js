@@ -14,6 +14,9 @@ class WelcomePlugin extends Plugin {
     load() {
         this.bot.welcome = new Welcome(this.bot);
     }
+    cleanup() {
+        return this.bot.welcome.cleanup();
+    }
 }
 
 class Welcome {
@@ -21,7 +24,7 @@ class Welcome {
         this.bot = bot;
         this.config = bot.config.WELCOME;
         this.db = new Database(this.config.DB);
-        bot.client.on('guildMemberAdd', this.onJoin.bind(this));
+        bot.client.on('guildMemberAdd', bot.wrapListener(this.onJoin, this));
     }
 
     getVars(member) {
@@ -59,7 +62,7 @@ class Welcome {
     }
 
     async isBannedFromServer(fandomIds, guild) {
-        const bans = await guild.fetchBans();
+        const bans = await guild.bans.fetch();
         for (const discordId of await this.db.getUsersByFandomIds(fandomIds)) {
             if (bans.has(discordId)) {
                 return true;
@@ -71,7 +74,9 @@ class Welcome {
     async reportBan(member, fandomIds) {
         if (this.config.NOTIFY_BAN) {
             const channel = await member.guild.channels.cache.get(this.config.NOTIFY_BAN);
-            await channel.send(`Banning <@${member.id}> as they are associated with Fandom accounts that were banned from the server (${fandomIds.join(', ')}).`);
+            if (channel) {
+                return channel.send(`Banning <@${member.id}> as they are associated with Fandom accounts that were banned from the server (${fandomIds.join(', ')}).`);
+            }
         }
     }
 
@@ -95,7 +100,11 @@ class Welcome {
             }
             return member.roles.add(this.config.ROLE);
         }
-        channel.send(this.formatMessage(this.config.MESSAGE, member));
+        return channel.send(this.formatMessage(this.config.MESSAGE, member));
+    }
+
+    cleanup() {
+        return this.db.cleanup();
     }
 }
 

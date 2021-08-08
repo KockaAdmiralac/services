@@ -13,19 +13,26 @@ class AutorolePlugin extends Plugin {
     load() {
         this.bot.autorole = new Autorole(this.bot);
     }
+    cleanup() {
+        return this.bot.autorole.cleanup();
+    }
 }
 
 class Autorole {
     constructor(bot) {
         this.bot = bot;
         this.db = new SIBaza(bot.config.SI);
-        bot.client.on('guildMemberAdd', this.onJoin.bind(this));
+        bot.client.on('guildMemberAdd', bot.wrapListener(this.onJoin, this));
     }
 
     async onJoin(member) {
         for (const role of await this.db.getRolesForUser(member.user.id)) {
             await member.roles.add(role);
         }
+    }
+
+    cleanup() {
+        return this.db.cleanup();
     }
 }
 

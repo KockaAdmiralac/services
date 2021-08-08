@@ -20,8 +20,8 @@
         "url": "https://github.com/KockaAdmiralac/services.git"
     },
     "dependencies": {
-        "discord.js": ">=12.5.1",
+        "discord.js": ">=13.0.1",
         "got": ">=11.8.2",
-        "mysql2": ">=2.2.5"
+        "mysql2": ">=2.3.0"
     }
 }

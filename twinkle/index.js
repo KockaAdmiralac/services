@@ -4,9 +4,10 @@
  *
  * Runs Twinkle but with modifications in plugins and commands.
  */
-const path = require('path'),
-      twinklePath = process.argv[2],
-      Twinkle = require(`${twinklePath}/src/Twinkle.js`);
+require('events').captureRejections = true;
+const path = require('path');
+const twinklePath = process.argv[2];
+const Twinkle = require(`${twinklePath}/src/Twinkle.js`);
 
 const client = new Twinkle();
 
@@ -19,3 +20,6 @@ if (client.commander) {
 }
 
 client.login(client.config.TOKEN);
+
+process.on('unhandledRejection', client.unhandledRejection.bind(client));
+process.on('SIGINT', client.cleanup.bind(client));

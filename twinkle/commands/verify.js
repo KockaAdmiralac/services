@@ -6,10 +6,10 @@
  *
  * Undertale Wiki (https://ut.wikia.com) is currently hardcoded.
  */
-const twinklePath = process.argv[2],
-      Command = require(`${twinklePath}/src/plugins/commander/structs/Command.js`),
-      {WebhookClient} = require('discord.js'),
-      got = require('got');
+const twinklePath = process.argv[2];
+const Command = require(`${twinklePath}/src/plugins/commander/structs/Command.js`);
+const {WebhookClient} = require('discord.js');
+const got = require('got');
 
 const INVALID_CHARACTERS = /[#<>[\]:\{\}]/u;
 
@@ -24,8 +24,11 @@ class VerifyCommand extends Command {
             '!verify wiki-username'
         ];
         if (this.bot.welcome && this.bot.welcome.config.WEBHOOK) {
-            const webhook = this.bot.welcome.config.WEBHOOK;
-            this.webhook = new WebhookClient(webhook.ID, webhook.TOKEN);
+            const {ID, TOKEN} = this.bot.welcome.config.WEBHOOK;
+            this.webhook = new WebhookClient({
+                id: ID,
+                token: TOKEN
+            });
         }
     }
 
@@ -64,21 +67,21 @@ class VerifyCommand extends Command {
 
     verificationError(message, description) {
         return message.channel.send({
-            embed: {
+            embeds: [{
                 color: 0xFF0000,
                 description,
                 title: 'Verification Error'
-            }
+            }]
         });
     }
 
     verificationStep(message, description) {
         return message.channel.send({
-            embed: {
+            embeds: [{
                 color: 0x00FF00,
                 description,
                 title: 'One More Step'
-            }
+            }]
         });
     }
 
@@ -97,6 +100,12 @@ class VerifyCommand extends Command {
         if (username.includes('@')) {
             return this.verificationError(message, 'Usernames on Fandom can\'t contain `@` in them. Please post _only_ your Fandom username, without @mentions of any kind.');
         }
+
+        // User literally typed in "<your Fandom username>"
+        if (username.toLowerCase().includes('<your fandom username>')) {
+            return this.verificationError(message, 'Please replace `<your Fandom username>` with your actual Fandom username and rerun the command.');
+        }
+
         // User specified an invalid username
         if (username.match(INVALID_CHARACTERS)) {
             return this.verificationError(message, 'The username you posted contains invalid characters and cannot be registered on Fandom. Please double-check whether your username is right.');
@@ -105,11 +114,11 @@ class VerifyCommand extends Command {
         const userId = await this.getUserId(username);
 
         if (!userId) {
-            return this.verificationError(message, 'That user does not exist on Fandom.');
+            return this.verificationError(message, 'That user does not exist on Fandom. Check [here](https://undertale.fandom.com/wiki/Special:MyPage) to see which user are you currently logged in as, or [here](https://fandom.com/signup) to sign up for a new Fandom account. Fandom usernames are case-sensitive!');
         }
 
-        const discordTag = await this.getMastheadDiscord(userId),
-              verificationLink = `https://undertale.fandom.com/wiki/Special:VerifyUser/${encodeURIComponent(username)}?user=${encodeURIComponent(message.author.username)}&tag=${message.author.discriminator}`;
+        const discordTag = await this.getMastheadDiscord(userId);
+        const verificationLink = `https://undertale.fandom.com/wiki/Special:VerifyUser/${encodeURIComponent(username)}?user=${encodeURIComponent(message.author.username)}&tag=${message.author.discriminator}`;
         if (!discordTag) {
             return this.verificationStep(message, `The user ${username} does not have their username set in their profile masthead. Please set it [here](<${verificationLink}>) and re-run this command.`);
         }
@@ -142,9 +151,13 @@ class VerifyCommand extends Command {
             }
             if (this.webhook) {
                 // Post the username in a logging channel
-                this.webhook.send(`<@${message.author.id}> - [${username}](<https://undertale.fandom.com/wiki/User:${encodeURIComponent(username)}>)`);
+                return this.webhook.send(`<@${message.author.id}> - [${username}](<https://undertale.fandom.com/wiki/User:${encodeURIComponent(username)}>)`);
             }
         }
+    }
+
+    cleanup() {
+        this.webhook.destroy();
     }
 }
 

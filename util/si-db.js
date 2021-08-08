@@ -93,6 +93,9 @@ class SIBaza {
             [discordID]
         ))[0].map(row => row.role_id);
     }
+    cleanup() {
+        return this.db.end();
+    }
 }
 
 module.exports = SIBaza;

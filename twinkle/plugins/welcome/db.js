@@ -41,6 +41,9 @@ class Database {
             fandomIds
         ))[0].map(row => row.discord_id);
     }
+    cleanup() {
+        return this.db.end();
+    }
 }
 
 module.exports = Database;

@@ -5,9 +5,9 @@
  */
 'use strict';
 
-const twinklePath = process.argv[2],
-      ModCommand = require(`${twinklePath}/src/plugins/commander/structs/ModCommand.js`),
-      SIBaza = require('../../util/si-db.js');
+const twinklePath = process.argv[2];
+const ModCommand = require(`${twinklePath}/src/plugins/commander/structs/ModCommand.js`);
+const SIBaza = require('../../util/si-db.js');
 
 class SIAddCommand extends ModCommand {
     constructor(bot) {
@@ -42,7 +42,11 @@ class SIAddCommand extends ModCommand {
             return message.channel.send('Discord ID nije validno formiran.');
         }
         await this.db.addStudent(year, index, lastName, firstName, discordID);
-        message.channel.send('Zabeležen.');
+        return message.channel.send('Zabeležen.');
+    }
+
+    cleanup() {
+        return this.db.cleanup();
     }
 };
 
