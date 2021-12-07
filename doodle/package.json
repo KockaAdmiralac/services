@@ -1,0 +1,30 @@
+{
+    "name": "doodle",
+    "version": "1.0.0",
+    "description": "Automatically signs up to Doodle polls that arrive to an email address.",
+    "keywords": [
+        "etf",
+        "outlook",
+        "doodle"
+    ],
+    "license": "MIT",
+    "author": {
+        "name": "KockaAdmiralac",
+        "email": "git@kocka.tech",
+        "url": "https://kocka.tech"
+    },
+    "main": "main.js",
+    "scripts": {
+        "start": "node main.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/KockaAdmiralac/services.git",
+        "directory": "doodle"
+    },
+    "dependencies": {
+        "discord.js": ">=13.3.1",
+        "got": ">=11.8.3",
+        "imap-simple": ">=5.1.0"
+    }
+}
