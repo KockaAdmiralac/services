@@ -14,7 +14,7 @@ const http = got.extend({
     retry: 0
 }), LINE_REGEX = /<tr class="tablica(?:0|1|Vikend|Danas).*/g,
 TERM_REGEX = /class='zauzete' id='[^']*'><center>([^<]+)/g,
-ROOMS = ['25', '26', '60', '26B', '70'],
+ROOMS = ['25', '26', '60', '26B', '70', '314', '315'],
 INTERVAL = 60 * 60 * 1000;
 
 function serialize({author, day, month, name, room, time, year}) {
