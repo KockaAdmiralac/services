@@ -8,6 +8,7 @@
 const twinklePath = process.argv[2];
 const ModCommand = require(`${twinklePath}/src/plugins/commander/structs/ModCommand.js`);
 const SIBaza = require('../../util/si-db.js');
+const {SlashCommandBuilder} = require('@discordjs/builders');
 
 const INDEX_REGEX = /^(\d+)\/(\d+)$/;
 const NAME_REGEX = /^(\S+) (\S+)$/;
@@ -25,6 +26,12 @@ class WhoisCommand extends ModCommand {
             '!koje <@148231501413089280>',
             '!whois 148231501413089280'
         ];
+        this.schema = new SlashCommandBuilder()
+            .addStringOption(option => option
+                .setName('upit')
+                .setDescription('Upit u formatu GGGG/BBBB, Име Презиме (mora ćirilicom) ili @pominjanja korisnika.')
+                .setRequired(true)
+            );
         this.db = new SIBaza(bot.config.SI);
     }
 
