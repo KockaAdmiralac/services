@@ -16,7 +16,6 @@ const SNOWFLAKE_REGEX = /^<?@?!?(\d+)>?$/;
 class WhoisCommand extends ModCommand {
     constructor(bot) {
         super(bot);
-        this.bot = bot;
         this.aliases = ['whois', 'koje'];
         this.shortdesc = 'Queries the SI database.';
         this.desc = 'Queries the SI database for a person and shows their information in an embed.';

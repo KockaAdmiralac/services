@@ -10,6 +10,7 @@ const twinklePath = process.argv[2];
 const Command = require(`${twinklePath}/src/plugins/commander/structs/Command.js`);
 const {WebhookClient} = require('discord.js');
 const got = require('got');
+const {SlashCommandBuilder} = require('@discordjs/builders');
 
 const INVALID_CHARACTERS = /[#<>[\]:\{\}]/u;
 
@@ -23,6 +24,12 @@ class VerifyCommand extends Command {
         this.usages = [
             '!verify wiki-username'
         ];
+        this.schema = new SlashCommandBuilder()
+            .addStringOption(option => option
+                .setName('username')
+                .setDescription('Your Fandom username')
+                .setRequired(true)
+            );
         if (this.bot.welcome && this.bot.welcome.config.WEBHOOK) {
             const {ID, TOKEN} = this.bot.welcome.config.WEBHOOK;
             this.webhook = new WebhookClient({
@@ -85,9 +92,15 @@ class VerifyCommand extends Command {
         });
     }
 
-    async call(message, content) {
+    async call(message, content, {interaction}) {
         // Only allow verification from the verification channel
         if (this.bot.welcome && this.bot.welcome.config.CHANNEL !== message.channel.id) {
+            if (interaction) {
+                await interaction.reply({
+                    content: 'You are already verified.',
+                    ephemeral: true
+                });
+            }
             return;
         }
         // User did not specify a username
@@ -148,6 +161,16 @@ class VerifyCommand extends Command {
                     after: this.bot.welcome.config.FIRST_MESSAGE
                 });
                 await message.channel.bulkDelete(messages.map(m => m.id));
+            }
+            if (interaction) {
+                await interaction.reply({
+                    embeds: [{
+                        color: 0x00FF00,
+                        description: 'Head out to other channels for conversation.',
+                        title: 'Verification successful!'
+                    }],
+                    ephemeral: true
+                })
             }
             if (this.webhook) {
                 // Post the username in a logging channel
