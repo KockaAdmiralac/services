@@ -115,7 +115,7 @@ class VerifyCommand extends Command {
         }
 
         // User literally typed in "<your Fandom username>"
-        if (username.toLowerCase().includes('<your fandom username>')) {
+        if (username.toLowerCase().includes('your fandom username')) {
             return this.verificationError(message, 'Please replace `<your Fandom username>` with your actual Fandom username and rerun the command.');
         }
 
