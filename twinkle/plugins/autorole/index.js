@@ -5,9 +5,9 @@
  * assigning roles to users on joining and greeting them if they haven't
  * joined before.
  */
-const twinklePath = process.argv[2],
-      Plugin = require(`${twinklePath}/src/structs/Plugin.js`),
-      SIBaza = require('../../../util/si-db.js');
+const twinklePath = process.argv[2];
+const Plugin = require(`${twinklePath}/src/structs/Plugin.js`);
+const SIBaza = require('../../../util/si-db.js');
 
 class AutorolePlugin extends Plugin {
     load() {
@@ -20,9 +20,9 @@ class AutorolePlugin extends Plugin {
 
 class Autorole {
     constructor(bot) {
-        this.bot = bot;
+        Object.defineProperty(this, 'bot', { value: bot });
         this.db = new SIBaza(bot.config.SI);
-        bot.client.on('guildMemberAdd', bot.wrapListener(this.onJoin, this));
+        bot.listen('guildMemberAdd', this.onJoin, this);
     }
 
     async onJoin(member) {

@@ -21,10 +21,10 @@ class WelcomePlugin extends Plugin {
 
 class Welcome {
     constructor(bot) {
-        this.bot = bot;
-        this.config = bot.config.WELCOME;
+        Object.defineProperty(this, 'bot', { value: bot });
+        Object.defineProperty(this, 'config', { value: bot.config.WELCOME });
         this.db = new Database(this.config.DB);
-        bot.client.on('guildMemberAdd', bot.wrapListener(this.onJoin, this));
+        bot.listen('guildMemberAdd', this.onJoin, this);
     }
 
     getVars(member) {
