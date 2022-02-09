@@ -14,13 +14,13 @@ const stats = {
 };
 
 const cookieJar = new CookieJar();
-const config = process.env.ETF_PROXY_CONFIG ?
-    JSON.parse(process.env.ETF_PROXY_CONFIG) :
+const token = process.env.ETF_PROXY_TOKEN ?
+    process.env.ETF_PROXY_TOKEN :
     (await import('./config.json', {
         assert: {
             type: 'json'
         }
-    })).default;
+    })).default.token;
 const PROXY_HEADERS = [
     'Accept',
     'User-Agent',
@@ -32,7 +32,7 @@ app.use(express.json());
 app.post('/', async function(request, response) {
     ++stats.requests;
     ++stats.active;
-    if (request.headers['authorization'] !== `Bearer ${config.token}`) {
+    if (request.headers['authorization'] !== `Bearer ${token}`) {
         ++stats.unauthorized;
         --stats.active;
         response.status(401).json({
@@ -104,4 +104,4 @@ app.get('/stats', function(_, response) {
     response.status(200).json(stats);
 });
 
-app.listen(config.port || 80);
+app.listen(process.env.PORT || 80);
