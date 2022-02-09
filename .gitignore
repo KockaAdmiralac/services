@@ -11,3 +11,4 @@ whatsapp/monitoring.txt
 **/cache.json
 **/config.json
 **/node_modules
+**/*.log
