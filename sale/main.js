@@ -4,7 +4,7 @@ import {readFile, writeFile} from 'fs/promises';
 import ETFClient from '../etf-proxy/client.js';
 import {promisify} from 'util';
 
-let webhook, reservations, running = true;
+let webhook, reservations;
 
 const http = new ETFClient({
     headers: {
@@ -92,20 +92,46 @@ async function getAllReserved() {
     return reserved;
 }
 
+function combine(reservations) {
+    const combinedReservations = {};
+    // TODO: This assumes the server is in the same timezone as Belgrade!
+    for (const {author, day, month, name, room, time, year} of reservations) {
+        const fallbackName = name || 'Untitled';
+        const fallbackAuthor = author || 'Unknown author';
+        const reservationKey = `${fallbackAuthor}:${fallbackName}`;
+        const [startTime, endTime] = time.split('-');
+        const startDate = new Date(`${year}-${month}-${day} ${startTime}`);
+        const endDate = new Date(`${year}-${month}-${day} ${endTime}`);
+        const start = startDate.getTime() / 1000;
+        const end = endDate.getTime() / 1000;
+        if (!combinedReservations[reservationKey]) {
+            combinedReservations[reservationKey] = {
+                author: fallbackAuthor,
+                name: fallbackName,
+                terms: []
+            };
+        }
+        combinedReservations[reservationKey].terms.push({room, start, end});
+    }
+    return Object.values(combinedReservations);
+}
+
 async function recheck(first) {
     try {
         const embeds = [];
-        for (const reservation of await getAllReserved()) {
+        for (const reservation of combine(await getAllReserved())) {
             const serialized = serialize(reservation);
             if (!reservations.has(serialized)) {
                 reservations.add(serialized);
-                const {author, day, month, name, room, time, year} = reservation;
+                const {author, name, terms} = reservation;
                 embeds.push({
                     author: {
                         name: author || 'Unknown author'
                     },
-                    description: `${time}, room ${room}`,
-                    timestamp: new Date(`${year}-${month}-${day} 8:00`).toISOString(),
+                    description: terms
+                        .map(({room, start, end}) => `• room ${room}: <t:${start}:f> - <t:${end}:f>`)
+                        .join('\n')
+                        .slice(0, 2000),
                     title: name || 'Untitled'
                 });
             }
@@ -135,7 +161,7 @@ webhook = new WebhookClient({id, token});
 reservations = new Set(await readJSON('cache.json') || []);
 await recheck(reservations.length === 0);
 await report('Service started.');
-while (running) {
+while (true) {
     await wait(INTERVAL);
     await recheck();
 }

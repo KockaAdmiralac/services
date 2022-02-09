@@ -1,6 +1,6 @@
 {
     "name": "sale",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "description": "Listens for reserved rooms on RTI.",
     "keywords": [
         "etf"
