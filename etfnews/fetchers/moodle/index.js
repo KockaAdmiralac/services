@@ -4,22 +4,17 @@
  * This module is imported when `moodle` is used as a fetcher's type in
  * etfnews configuration.
  */
-'use strict';
-
-/**
- * Importing modules.
- */
-const Fetcher = require('..'),
-      pkg = require('../../package.json'),
-      got = require('got'),
-      {parse} = require('node-html-parser'),
-      {CookieJar} = require('tough-cookie');
+import Fetcher from '../index.js';
+import pkg from '../../package.json' assert {type: 'json'};
+import {parse} from 'node-html-parser';
+import {CookieJar} from 'tough-cookie';
+import ETFClient from '../../../etf-proxy/client.js';
 
 /**
  * Fetches content of a Moodle course.
  * @augments Fetcher
  */
-class MoodleFetcher extends Fetcher {
+export default class MoodleFetcher extends Fetcher {
     /**
      * Class constructor. Initializes the HTTP client.
      * @param {object} config Fetcher configuration
@@ -29,14 +24,12 @@ class MoodleFetcher extends Fetcher {
         this._url = config.url;
         this._username = config.username;
         this._password = config.password;
-        this._client = got.extend({
+        this._client = new ETFClient({
             cookieJar: new CookieJar(),
             headers: {
                 'User-Agent': `${pkg.name} v${pkg.version}: ${pkg.description} [${pkg.url}]`
             },
-            method: 'GET',
-            resolveBodyOnly: true,
-            retry: 0
+            resolveBodyOnly: true
         });
     }
     /**
@@ -44,18 +37,18 @@ class MoodleFetcher extends Fetcher {
      */
     async login() {
         console.info(new Date(), 'Logging in to Moodle...');
-        const loginHTML = await this._client(`${this._url}/login/index.php`),
-              tree = parse(loginHTML),
-              logintoken = tree.querySelector('.loginsub [name="logintoken"]')
-                        .getAttribute('value');
-        return this._client(`${this._url}/login/index.php`, {
+        const loginHTML = await this._client.get(`${this._url}/login/index.php`);
+        const tree = parse(loginHTML);
+        const logintoken = tree
+            .querySelector('.loginsub [name="logintoken"]')
+            .getAttribute('value');
+        return this._client.post(`${this._url}/login/index.php`, {
             form: {
                 logintoken,
                 password: this._password,
                 rememberusername: 1,
                 username: this._username
-            },
-            method: 'POST'
+            }
         });
     }
     /**
@@ -66,16 +59,18 @@ class MoodleFetcher extends Fetcher {
      */
     async fetch(url, retried) {
         try {
-            const t = Date.now(),
-                  searchParams = new URLSearchParams(url.searchParams);
-            searchParams.set('t', t);
-            const response = (await this._client(url, {searchParams}))
-                .replace(new RegExp(t, 'g'), ''),
-                tree = parse(response, {
-                    blockTextElements: {
-                        script: false
-                    }
-                });
+            const t = Date.now();
+            const searchParams = {
+                ...this.queryParams(url),
+                t
+            };
+            const response = (await this._client.get(url, {searchParams}))
+                .replace(new RegExp(t, 'g'), '');
+            const tree = parse(response, {
+                blockTextElements: {
+                    script: false
+                }
+            });
             if (tree.querySelector('.usermenu .login')) {
                 if (retried) {
                     throw new Error('Login to Moodle unsuccessful!');
@@ -99,5 +94,3 @@ class MoodleFetcher extends Fetcher {
         }
     }
 }
-
-module.exports = MoodleFetcher;

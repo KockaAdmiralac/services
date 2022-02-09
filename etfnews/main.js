@@ -4,13 +4,8 @@
  *
  * Main entry point of ETFNews.
  */
-'use strict';
-
-/**
- * Importing modules.
- */
-const fs = require('fs'),
-      ETFNews = require('./include/etfnews.js');
+import {readFile, writeFile} from 'fs/promises';
+import ETFNews from './include/etfnews.js';
 
 let etfnews = null;
 
@@ -19,7 +14,7 @@ let etfnews = null;
  * @returns {object} etfnews configuration object
  */
 async function loadConfig() {
-    return JSON.parse(await fs.promises.readFile('config.json', {
+    return JSON.parse(await readFile('config.json', {
         encoding: 'utf-8'
     }));
 }
@@ -27,75 +22,69 @@ async function loadConfig() {
 /**
  * Kills the etfnews agent and exits etfnews.
  */
-async function kill() {
-    if (etfnews != null) {
-        console.info('Received kill signal, exiting...');
-        try {
-            await etfnews.kill();
-        } catch (error) {
-            console.error('Failed to kill agent:', error);
-            return;
-        }
-        console.info('Agent killed.');
+process.on('SIGINT', async function() {
+    if (etfnews === null) {
+        return;
     }
-}
+    console.info('Received kill signal, exiting...');
+    try {
+        await etfnews.kill();
+    } catch (error) {
+        console.error('Failed to kill agent:', error);
+        return;
+    }
+    console.info('Agent killed.');
+});
 
 /**
  * Reloads the etfnews agent's configuration.
  * This currently kills the agent and restarts it.
  */
-async function reload() {
-    if (etfnews != null) {
-        console.info('Reloading agent...');
-        try {
-            await etfnews.kill();
-        } catch (error) {
-            console.error('Failed to kill agent:', error);
-            return;
-        }
-        let config;
-        try {
-            config = await loadConfig();
-        } catch (error) {
-            console.error('Failed to reload configuration:', error);
-            return;
-        }
-        try {
-            etfnews = new ETFNews(config);
-        } catch (error) {
-            console.error('Failed to reconfigure agent:', error);
-            return;
-        }
-        console.info('Agent reloaded.');
+process.on('SIGHUP', async function() {
+    if (etfnews === null) {
+        return;
     }
-}
-
-/**
- * Asynchronous entry point.
- */
-async function main() {
-    console.info('ETFNews starting...');
-    await fs.promises.writeFile('main.pid', process.pid.toString());
+    console.info('Reloading agent...');
+    try {
+        await etfnews.kill();
+    } catch (error) {
+        console.error('Failed to kill agent:', error);
+        return;
+    }
     let config;
     try {
         config = await loadConfig();
     } catch (error) {
-        if (error && error.code === 'ENOENT') {
-            console.error('Configuration was not found. Please make sure the sample configuration has been renamed or copied to `config.json`.');
-        } else {
-            console.error('Failed to load configuration:', error);
-        }
+        console.error('Failed to reload configuration:', error);
         return;
     }
     try {
         etfnews = new ETFNews(config);
     } catch (error) {
-        console.error('Failed to configure agent:', error);
+        console.error('Failed to reconfigure agent:', error);
         return;
     }
-    console.info('Agent started.');
-    process.on('SIGINT', kill);
-    process.on('SIGHUP', reload);
-}
+    console.info('Agent reloaded.');
+});
 
-main();
+console.info('ETFNews starting...');
+await writeFile('main.pid', process.pid.toString());
+let config;
+try {
+    config = await loadConfig();
+} catch (error) {
+    if (error && error.code === 'ENOENT') {
+        console.error('Configuration was not found. Please make sure the sample configuration has been renamed or copied to `config.json`.');
+    } else {
+        console.error('Failed to load configuration:', error);
+    }
+    process.exit(1);
+}
+try {
+    etfnews = new ETFNews(config);
+    await etfnews.init();
+} catch (error) {
+    console.error('Failed to configure agent:', error);
+    process.exit(1);
+}
+console.info('Agent started.');

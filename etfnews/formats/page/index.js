@@ -4,21 +4,16 @@
  * This module is imported when `page` is used as a format's type in
  * etfnews configuration.
  */
-'use strict';
-
-/**
- * Importing modules.
- */
-const Format = require('..'),
-      {diffLines} = require('diff'),
-      h2m = require('h2m'),
-      md5 = require('md5');
+import Format from '../index.js';
+import {diffLines} from 'diff';
+import h2m from 'h2m';
+import md5 from 'md5';
 
 /**
  * Formats an embed for Discord based on old and new content of an HTML page.
  * @augments Format
  */
-class PageFormat extends Format {
+export default class PageFormat extends Format {
     /**
      * Extracts useful content from a page.
      * @param {string} content Content to format
@@ -46,8 +41,8 @@ class PageFormat extends Format {
      * @returns {object} Transport-compatible objects
      */
     async format(url, title, newContent, oldContent) {
-        const extractedNew = this.extract(newContent, url),
-              extractedOld = this.extract(oldContent, url);
+        const extractedNew = this.extract(newContent, url);
+        const extractedOld = this.extract(oldContent, url);
         if (md5(extractedNew) === md5(extractedOld)) {
             return;
         }
@@ -106,5 +101,3 @@ class PageFormat extends Format {
         }${href})`;
     }
 }
-
-module.exports = PageFormat;

@@ -4,19 +4,14 @@
  * This module is imported when `etf` is used as a format's type in
  * etfnews configuration.
  */
-'use strict';
-
-/**
- * Importing modules.
- */
-const Format = require('..');
+import Format from '../index.js';
 
 /**
  * Formats an embed for Discord based JSON data about the news article
  * received from the fetcher.
  * @augments Format
  */
-class ETFFormat extends Format {
+export default class ETFFormat extends Format {
     /**
      * Formats the differences between fetched content into Discord embeds.
      * @param {string} content Newly fetched content
@@ -47,5 +42,3 @@ class ETFFormat extends Format {
         };
     }
 }
-
-module.exports = ETFFormat;

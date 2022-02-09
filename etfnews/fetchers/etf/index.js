@@ -4,41 +4,34 @@
  * This module is imported when `etf` is used as a fetcher's type in
  * etfnews configuration.
  */
-'use strict';
-
-/**
- * Importing modules.
- */
-const Fetcher = require('..'),
-      pkg = require('../../package.json'),
-      got = require('got');
+import Fetcher from '../index.js';
+import pkg from '../../package.json' assert {type: 'json'};
+import ETFClient from '../../../etf-proxy/client.js';
 
 /**
  * Constants.
  */
-const NEWS_HTML_FILTER = /\$\('#vesti-arhiva-filtered'\)\.html\("(.*)"\);\n\$\('#vesti-arhiva-pagination'\)\.html\("/,
-      INFORMATION_FILTER = /<h3 class="vest-naslov"><a href="\/([^"]+)">([^<]*)<\/a><\/h3><time class="vest-objavljeno" datetime="([^"]+)" title="[^"]*">[^<]*<\/time><\/header><div class="vest-ukratko"><p>([^<]*)<\/p>/;
+const NEWS_HTML_FILTER = /\$\('#vesti-arhiva-filtered'\)\.html\("(.*)"\);\n\$\('#vesti-arhiva-pagination'\)\.html\("/;
+const INFORMATION_FILTER = /<h3 class="vest-naslov"><a href="\/([^"]+)">([^<]*)<\/a><\/h3><time class="vest-objavljeno" datetime="([^"]+)" title="[^"]*">[^<]*<\/time><\/header><div class="vest-ukratko"><p>([^<]*)<\/p>/;
 
 /**
  * Fetches news from ETF main page.
  * @augments Fetcher
  */
-class ETFFetcher extends Fetcher {
+export default class ETFFetcher extends Fetcher {
     /**
      * Class constructor. Initializes the HTTP client.
      * @param {object} config Fetcher configuration
      */
     constructor(config) {
         super(config);
-        this._client = got.extend({
+        this._client = new ETFClient({
             headers: {
                 'Accept': 'text/javascript',
                 'User-Agent': `${pkg.name} v${pkg.version}: ${pkg.description}`,
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            method: 'GET',
-            resolveBodyOnly: true,
-            retry: 0
+            resolveBodyOnly: true
         });
         this.cache = new Date();
     }
@@ -49,16 +42,15 @@ class ETFFetcher extends Fetcher {
      */
     async fetch(url) {
         try {
-            const t = Date.now(),
-                  searchParams = new URLSearchParams(url.searchParams),
-                  d = this.cache,
-                  pad = num => String(num).padStart(2, 0);
-            searchParams.set('t', t);
-            searchParams.set(
-                'q[objavljeno_od]',
-                `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-            );
-            const response = (await this._client(url, {searchParams}))
+            const t = Date.now();
+            const searchParams = {
+                ...this.queryParams(url),
+                t,
+                'q[objavljeno_od]': `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+            };
+            const d = this.cache;
+            const pad = num => String(num).padStart(2, 0);
+            const response = (await this._client.get(url, {searchParams}))
                 .match(NEWS_HTML_FILTER)[1]
                 .replace(/\\\//g, '/')
                 .replace(/\\"/g, '"')
@@ -86,5 +78,3 @@ class ETFFetcher extends Fetcher {
         }
     }
 }
-
-module.exports = ETFFetcher;

@@ -3,13 +3,8 @@
  *
  * Handles a single page's process of fetching, formatting and relaying.
  */
-'use strict';
-
-/**
- * Importing modules.
- */
-const fs = require('fs'),
-      {URL} = require('url');
+import {readdir, readFile, mkdir, writeFile} from 'fs/promises';
+import {URL} from 'url';
 
 /**
  * Constants.
@@ -22,7 +17,7 @@ const DEFAULT_REFRESH_INTERVAL = 30000;
  * Handles communication between a fetcher, a format and a transport and
  * persists old page content between fetches.
  */
-class Page {
+export default class Page {
     /**
      * Class constructor. Handles page configuration.
      * Errors occurring here should be handled by the client.
@@ -49,7 +44,8 @@ class Page {
      * Rechecks the page for changed content and relays that content.
      */
     async _interval() {
-        let content = null, formattedContent = null;
+        let content = null;
+        let formattedContent = null;
         try {
             content = await this._fetcher.fetch(this._url);
         } catch (error) {
@@ -96,9 +92,9 @@ class Page {
      */
     async _restoreOldContent() {
         try {
-            const historyFiles = (await fs.promises.readdir(`hist/${this._name}`)).sort();
+            const historyFiles = (await readdir(`hist/${this._name}`)).sort();
             if (historyFiles.length) {
-                return await fs.promises.readFile(`hist/${this._name}/${historyFiles[historyFiles.length - 1]}`, {
+                return await readFile(`hist/${this._name}/${historyFiles[historyFiles.length - 1]}`, {
                     encoding: 'utf-8'
                 });
             } else {
@@ -115,10 +111,10 @@ class Page {
      * Records new page content to history.
      */
     async _recordNewContent() {
-        await fs.promises.mkdir(`hist/${this._name}`, {
+        await mkdir(`hist/${this._name}`, {
             recursive: true
         });
-        await fs.promises.writeFile(`hist/${this._name}/${Date.now()}.html`, this._oldContent, {
+        await writeFile(`hist/${this._name}/${Date.now()}.html`, this._oldContent, {
             encoding: 'utf-8'
         });
     }
@@ -132,5 +128,3 @@ class Page {
         }
     }
 }
-
-module.exports = Page;

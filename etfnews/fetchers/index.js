@@ -3,8 +3,6 @@
  *
  * To be imported by all other fetchers in etfnews.
  */
-'use strict';
-
 /**
  * Base fetcher class for all etfnews fetchers.
  *
@@ -12,7 +10,7 @@
  * and fetches latest available content from them which is then compared
  * against old content and formatted in a format.
  */
-class Fetcher {
+export default class Fetcher {
     /**
      * Class constructor.
      * @param {any} config Fetcher configuration
@@ -36,6 +34,18 @@ class Fetcher {
     async kill() {
         // This currently doesn't do anything.
     }
+    /**
+     * Converts query parameters of a specified URL into a plain
+     * JavaScript object.
+     * @param {URL} url URL from which to get query parameters
+     * @returns {object} Query parameters in a plain object
+     */
+    queryParams(url) {
+        const params = {};
+        const searchParams = new URLSearchParams(url.searchParams);
+        for (const [key, value] of searchParams.entries()) {
+            params[key] = value;
+        }
+        return params;
+    }
 }
-
-module.exports = Fetcher;

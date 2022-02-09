@@ -4,12 +4,7 @@
  * This is where magic happens, if your definition of magic includes a lot of
  * Node.js module loading.
  */
-'use strict';
-
-/**
- * Importing modules.
- */
-const Page = require('./page.js');
+import Page from './page.js';
 
 /**
  * Agent for etfnews.
@@ -17,18 +12,22 @@ const Page = require('./page.js');
  * Loads all configured transports, formats and fetchers and initializes
  * all pages.
  */
-class ETFNews {
+export default class ETFNews {
     /**
-     * Class constructor. Initializes all submodules of etfnews.
-     * @param {object} transports Transport configuration
-     * @param {object} formats Format configuration
-     * @param {object} fetchers Fetcher configuration
-     * @param {object} pages Page configuration
+     * Class constructor.
+     * @param {object} config ETFNews configuration 
      */
-    constructor({transports, formats, fetchers, pages}) {
-        this._initSubmodule('transport', transports);
-        this._initSubmodule('format', formats);
-        this._initSubmodule('fetcher', fetchers);
+    constructor(config) {
+        this.config = config;
+    }
+    /**
+     * Initializes all submodules and pages of etfnews.
+     */
+    async init() {
+        const {transports, formats, fetchers, pages} = this.config;
+        await this._initSubmodule('transport', transports);
+        await this._initSubmodule('format', formats);
+        await this._initSubmodule('fetcher', fetchers);
         this._initPages(pages);
     }
     /**
@@ -41,7 +40,7 @@ class ETFNews {
      *                      'transport', 'format' or 'fetcher'.
      * @param {object} submodules Configuration for all submodules
      */
-    _initSubmodule(type, submodules) {
+    async _initSubmodule(type, submodules) {
         this[`_${type}s`] = {};
         for (const name in submodules) {
             const config = submodules[name];
@@ -51,7 +50,7 @@ class ETFNews {
                 continue;
             }
             try {
-                Submodule = require(`../${type}s/${config.type}`);
+                Submodule = (await import(`../${type}s/${config.type}/index.js`)).default;
             } catch (error) {
                 console.warn(`'${name}' ${type} failed to load:`, error);
                 continue;
@@ -74,9 +73,9 @@ class ETFNews {
             if (!config.fetcher || !config.transport || !config.format) {
                 console.warn(`Page '${name} does not have a configured fetcher, transport or format.`);
             }
-            const transport = this._transports[config.transport],
-                  format = this._formats[config.format],
-                  fetcher = this._fetchers[config.fetcher];
+            const transport = this._transports[config.transport];
+            const format = this._formats[config.format];
+            const fetcher = this._fetchers[config.fetcher];
             if (!transport) {
                 console.warn(`Page '${name}' uses an uninitialized transport.`);
                 continue;
@@ -108,5 +107,3 @@ class ETFNews {
         }
     }
 }
-
-module.exports = ETFNews;

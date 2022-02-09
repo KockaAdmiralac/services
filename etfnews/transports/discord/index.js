@@ -4,19 +4,14 @@
  * This module is imported when `discord` is used as a transport's type in
  * etfnews configuration.
  */
-'use strict';
-
-/**
- * Importing modules.
- */
-const Transport = require('..'),
-      {WebhookClient} = require('discord.js');
+import Transport from '../index.js';
+import {WebhookClient} from 'discord.js';
 
 /**
  * Transports formatted content to Discord.
  * @augments Transport
  */
-class DiscordTransport extends Transport {
+export default class DiscordTransport extends Transport {
     /**
      * Class constructor.
      * Initializes a Discord webhook.
@@ -47,5 +42,3 @@ class DiscordTransport extends Transport {
         this._webhook.destroy();
     }
 }
-
-module.exports = DiscordTransport;

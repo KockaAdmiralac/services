@@ -3,8 +3,6 @@
  *
  * To be imported by all other transports in etfnews.
  */
-'use strict';
-
 /**
  * Base transport class for all etfnews transports.
  *
@@ -12,7 +10,7 @@
  * and relays it to other services where etfnews users can easily review
  * the changes made to relevant web pages.
  */
-class Transport {
+export default class Transport {
     /**
      * Class constructor.
      * @param {any} config Transport configuration
@@ -37,5 +35,3 @@ class Transport {
         // This currently doesn't do anything.
     }
 }
-
-module.exports = Transport;

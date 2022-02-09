@@ -4,13 +4,8 @@
  * This module is imported when `directory` is used as a format's type in
  * etfnews configuration.
  */
-'use strict';
-
-/**
- * Importing modules.
- */
-const Format = require('..'),
-      {diffArrays} = require('diff');
+import Format from '../index.js';
+import {diffArrays} from 'diff';
 
 /**
  * Constants.
@@ -22,7 +17,7 @@ const DIRECTORY_REGEX = /<img src="\/icons\/[^"]+" alt="\[([^\]]+)\]">(?:<\/td><
  * listings.
  * @augments Format
  */
-class DirectoryFormat extends Format {
+export default class DirectoryFormat extends Format {
     /**
      * Formats the differences between fetched content into Discord embeds.
      * @param {URL} url URL of the page where the content was fetched from
@@ -32,12 +27,12 @@ class DirectoryFormat extends Format {
      * @returns {object} Transport-compatible objects
      */
     async format(url, title, newContent, oldContent) {
-        const oldListing = this._parseApacheListing(oldContent),
-              newListing = this._parseApacheListing(newContent),
-              embeds = [
-                ...this._compareLists('files', url, oldListing.files, newListing.files),
-                ...this._compareLists('directories', url, oldListing.directories, newListing.directories)
-              ];
+        const oldListing = this._parseApacheListing(oldContent);
+        const newListing = this._parseApacheListing(newContent);
+        const embeds = [
+            ...this._compareLists('files', url, oldListing.files, newListing.files),
+            ...this._compareLists('directories', url, oldListing.directories, newListing.directories)
+        ];
         if (embeds.length === 0) {
             return;
         }
@@ -95,20 +90,20 @@ class DirectoryFormat extends Format {
      * @returns {string} Discord embed content
      */
     _compareLists(what, url, oldList, newList) {
-        const oldFilenames = Object.keys(oldList).sort(),
-              newFilenames = Object.keys(newList).sort(),
-              changeList = diffArrays(oldFilenames, newFilenames),
-              newFiles = changeList
+        const oldFilenames = Object.keys(oldList).sort();
+        const newFilenames = Object.keys(newList).sort();
+        const changeList = diffArrays(oldFilenames, newFilenames);
+        const newFiles = changeList
                 .filter(change => change.added)
-                .flatMap(change => change.value),
-              removedFiles = changeList
+                .flatMap(change => change.value);
+        const removedFiles = changeList
                 .filter(change => change.removed)
-                .flatMap(change => change.value),
-              changedFiles = changeList
+                .flatMap(change => change.value);
+        const changedFiles = changeList
                 .filter(change => !change.added && !change.removed)
                 .flatMap(change => change.value)
-                .filter(value => oldList[value].getTime() !== newList[value].getTime()),
-              embeds = [];
+                .filter(value => oldList[value].getTime() !== newList[value].getTime());
+        const embeds = [];
         if (newFiles.length) {
             embeds.push(this._formatList(`New ${what}`, url, newFiles));
         }
@@ -137,5 +132,3 @@ class DirectoryFormat extends Format {
         }`;
     }
 }
-
-module.exports = DirectoryFormat;

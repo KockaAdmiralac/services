@@ -3,8 +3,6 @@
  *
  * To be imported by all other formats in etfnews.
  */
-'use strict';
-
 /**
  * Base format class for all etfnews formats.
  *
@@ -12,7 +10,7 @@
  * and transports - it formats the content produced (and fetched) by one or
  * more fetchers so it can be read (and transported) by one or more transports.
  */
-class Format {
+export default class Format {
     /**
      * Class constructor.
      * @param {any} config Format configuration
@@ -41,5 +39,3 @@ class Format {
         // This currently doesn't do anything.
     }
 }
-
-module.exports = Format;

@@ -4,20 +4,15 @@
  * This module is imported when `basic` is used as a fetcher's type in
  * etfnews configuration.
  */
-'use strict';
-
-/**
- * Importing modules.
- */
-const Fetcher = require('..'),
-      pkg = require('../../package.json'),
-      got = require('got');
+import Fetcher from '../index.js';
+import pkg from '../../package.json' assert {type: 'json'};
+import ETFClient from '../../../etf-proxy/client.js';
 
 /**
  * Basic fetcher that fetches content on a specified URL via HTTP.
  * @augments Fetcher
  */
-class BasicFetcher extends Fetcher {
+export default class BasicFetcher extends Fetcher {
     /**
      * Class constructor. Initializes the HTTP client.
      * @param {object} config Fetcher configuration
@@ -27,13 +22,11 @@ class BasicFetcher extends Fetcher {
         this._replacements = config.replacements instanceof Array ?
             config.replacements.map(([r1, r2]) => [new RegExp(r1, 'g'), r2]) :
             [];
-        this._client = got.extend({
+        this._client = new ETFClient({
             headers: {
                 'User-Agent': `${pkg.name} v${pkg.version}: ${pkg.description} [${pkg.url}]`
             },
-            method: 'GET',
-            resolveBodyOnly: true,
-            retry: 0
+            resolveBodyOnly: true
         });
     }
     /**
@@ -43,10 +36,12 @@ class BasicFetcher extends Fetcher {
      */
     async fetch(url) {
         try {
-            const t = Date.now(),
-                  searchParams = new URLSearchParams(url.searchParams);
-            searchParams.set('t', t);
-            const response = await this._client(url, {searchParams});
+            const t = Date.now();
+            const searchParams = {
+                ...this.queryParams(url),
+                t
+            };
+            const response = await this._client.get(url, {searchParams});
             let replacedContent = response.replace(new RegExp(t, 'g'), '');
             for (const replacement of this._replacements) {
                 replacedContent = replacedContent.replace(...replacement);
@@ -58,5 +53,3 @@ class BasicFetcher extends Fetcher {
         }
     }
 }
-
-module.exports = BasicFetcher;
