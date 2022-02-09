@@ -1,6 +1,6 @@
 {
     "name": "approve-account",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "description": "Automatically approves account requests made through the ConfirmAccount extension based on their email address.",
     "keywords": [
         "mediawiki"
@@ -13,19 +13,21 @@
     },
     "main": "main.js",
     "scripts": {
-        "start": "node main.js"
+        "start": "node --experimental-json-modules main.js"
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/KockaAdmiralac/services.git"
+        "url": "https://github.com/KockaAdmiralac/services.git",
+        "directory": "approve-account"
     },
     "dependencies": {
-        "discord.js": ">=13.0.0",
-        "got": ">=11.8.2",
-        "mysql2": ">=2.3.0",
-        "tough-cookie": ">=4.0.0"
+        "discord.js": "13.6.0",
+        "got": "12.0.1",
+        "mysql2": "2.3.3",
+        "tough-cookie": "4.0.0"
     },
     "engines": {
         "node": ">=16"
-    }
+    },
+    "type": "module"
 }

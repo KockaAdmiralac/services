@@ -1,14 +1,9 @@
-#!/usr/bin/env node
-'use strict';
-
-/**
- * Importing modules.
- */
-const {WebhookClient} = require('discord.js'),
-      got = require('got'),
-      mysql = require('mysql2/promise'),
-      {CookieJar} = require('tough-cookie'),
-      {db, discord, interval, mediawiki, suffix} = require('./config.json');
+#!/usr/bin/env node --experimental-json-modules
+import {WebhookClient} from 'discord.js';
+import got from 'got';
+import mysql from 'mysql2/promise';
+import {CookieJar} from 'tough-cookie';
+import config from './config.json' assert {type: 'json'};
 
 /**
  * Constants.
@@ -18,23 +13,24 @@ const http = got.extend({
     headers: {
         'User-Agent': 'approve-account'
     },
-    prefixUrl: `${mediawiki.url}${mediawiki.script || ''}/`,
-    resolveBodyOnly: true,
-    retry: 0
-}), serviceNotification = new WebhookClient(discord),
-databasePool = mysql.createPool({
+    prefixUrl: `${config.mediawiki.url}${config.mediawiki.script || ''}/`,
+    resolveBodyOnly: true
+});
+const serviceNotification = new WebhookClient(config.discord);
+const databasePool = mysql.createPool({
     connectionLimit: 10,
-    database: db.database,
-    host: db.host || 'localhost',
-    user: db.username,
-    password: db.password,
+    database: config.db.database,
+    host: config.db.host || 'localhost',
+    user: config.db.username,
+    password: config.db.password,
     queueLimit: 0,
     waitForConnections: true
-}), QUERY = 'SELECT `acr_email`, `acr_id`, `acr_name`, `acr_real_name` FROM `account_requests` ' +
-            'WHERE `acr_email_authenticated` IS NOT NULL AND ' +
-            '`acr_deleted` = 0 AND ' +
-            '`acr_email` LIKE ? AND ' +
-            'NOT EXISTS (SELECT `user_id` FROM `user` WHERE `acr_email` = `user_email`)';
+});
+const QUERY = 'SELECT `acr_email`, `acr_id`, `acr_name`, `acr_real_name` FROM `account_requests` ' +
+    'WHERE `acr_email_authenticated` IS NOT NULL AND ' +
+    '`acr_deleted` = 0 AND ' +
+    '`acr_email` LIKE ? AND ' +
+    'NOT EXISTS (SELECT `user_id` FROM `user` WHERE `acr_email` = `user_email`)';
 
 /**
  * Global variables.
@@ -69,7 +65,9 @@ async function getTokens() {
         },
         responseType: 'json'
     });
-    let createaccount = '', csrf = '', login = '';
+    let createaccount = '';
+    let csrf = '';
+    let login = '';
     if (response && response.query && response.query.tokens) {
         const {
             createaccounttoken,
@@ -98,10 +96,10 @@ async function login(token) {
         form: {
             action: 'clientlogin',
             format: 'json',
-            loginreturnurl: mediawiki.url,
+            loginreturnurl: config.mediawiki.url,
             logintoken: token,
-            username: mediawiki.username,
-            password: mediawiki.password
+            username: config.mediawiki.username,
+            password: config.mediawiki.password
         },
         responseType: 'json'
     });
@@ -118,7 +116,7 @@ async function login(token) {
  */
 async function approveRequest(request, createAccountToken, csrfToken) {
     await notify(`Approving request ${request.acr_id} from ${request.acr_name}`);
-    console.debug('Registration HTML:', await http.post('index.php', {
+    await http.post('index.php', {
         form: {
             AccountRequestId: request.acr_id,
             authAction: 'create',
@@ -132,7 +130,7 @@ async function approveRequest(request, createAccountToken, csrfToken) {
             wpRealName: request.acr_real_name,
             wpReason: 'Automatically accepting user with known email suffix.'
         }
-    }));
+    });
 }
 
 /**
@@ -142,7 +140,7 @@ async function approveRequest(request, createAccountToken, csrfToken) {
 async function doInterval() {
     try {
         const requests = (await databasePool.execute(QUERY, [
-            `%@${suffix}`
+            `%@${config.suffix}`
         ]))[0];
         if (requests.length === 0) {
             return;
@@ -167,7 +165,7 @@ async function doInterval() {
  * Cleans up the resources and ends the process.
  */
 async function kill() {
-    await notify('Closing service...');
+    await notify('Stopping service...');
     if (intervalId) {
         clearInterval(intervalId);
     }
@@ -175,6 +173,7 @@ async function kill() {
     serviceNotification.destroy();
 }
 
-intervalId = setInterval(doInterval, interval);
+intervalId = setInterval(doInterval, config.interval);
 process.on('SIGINT', kill);
 process.on('SIGTERM', kill);
+await notify('Service started.');
