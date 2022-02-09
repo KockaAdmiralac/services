@@ -1,6 +1,6 @@
 {
     "name": "doodle",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Automatically signs up to Doodle polls that arrive to an email address.",
     "keywords": [
         "etf",
@@ -15,7 +15,7 @@
     },
     "main": "main.js",
     "scripts": {
-        "start": "node main.js"
+        "start": "node --experimental-json-modules main.js"
     },
     "repository": {
         "type": "git",
@@ -23,8 +23,12 @@
         "directory": "doodle"
     },
     "dependencies": {
-        "discord.js": ">=13.3.1",
-        "got": ">=11.8.3",
-        "imap-simple": ">=5.1.0"
-    }
+        "discord.js": "13.6.0",
+        "got": "12.0.1",
+        "imap-simple": "5.1.0"
+    },
+    "engines": {
+        "node": ">=17"
+    },
+    "type": "module"
 }

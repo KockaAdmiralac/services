@@ -1,18 +1,20 @@
-#!/usr/bin/env node
-const {WebhookClient} = require('discord.js');
-const got = require('got');
-const imaps = require('imap-simple');
-const {discord, imap, intervalMs, name} = require('./config.json');
+#!/usr/bin/env node --experimental-json-modules
+import {WebhookClient} from 'discord.js';
+import got from 'got';
+import imaps from 'imap-simple';
+import config from './config.json' assert {type: 'json'};
+
 const signedUp = new Set();
 const seenUIDs = new Set();
 const DOODLE_URL = /https:\/\/(www\.)?doodle.com\/poll\/([0-9a-zA-Z]+)/g;
-const webhook = new WebhookClient(discord);
+const webhook = new WebhookClient(config.discord);
+let timeoutCount = 0;
 
 async function notify(text, error) {
     if (error) {
         console.error(new Date(), text, error);
     } else {
-        console.info(new Date(), text, error);
+        console.info(new Date(), text);
     }
     if (text.length) {
         await webhook.send({
@@ -34,22 +36,16 @@ async function signUp(pollId) {
                 optionsHash,
                 participants
             } = await got(`https://doodle.com/api/v2.0/polls/${pollId}`).json();
-            if (participants instanceof Array && participants.some(p => p.name === name)) {
+            if (participants instanceof Array && participants.some(p => p.name === config.name)) {
                 await notify('Already signed up.');
                 signedUp.add(pollId);
                 return;
             }
-            const preferences = [];
-            for (const option of options) {
-                if (levels === 'YESNOIFNEEDBE') {
-                    preferences.push(2);
-                } else {
-                    preferences.push(1);
-                }
-            }
+            const preferences = options
+                .map(() => (levels === 'YESNOIFNEEDBE') ? 2 : 1);
             await got.post(`https://doodle.com/api/v2.0/polls/${pollId}/participants`, {
                 json: {
-                    name,
+                    name: config.name,
                     preferences,
                     participantKey: null,
                     optionsHash
@@ -65,9 +61,14 @@ async function signUp(pollId) {
     await notify('Failed to sign up!');
 }
 
+function connectionError(error) {
+    return notify('Unhandled connection error', error);
+}
+
 async function interval() {
     try {
-        const connection = await imaps.connect({imap});
+        const connection = await imaps.connect({imap: config.imap});
+        connection.on('error', connectionError);
         await connection.openBox('INBOX');
         const messages = await connection.search(['UNSEEN'], {
             bodies: ['TEXT'],
@@ -78,12 +79,10 @@ async function interval() {
                 continue;
             }
             await notify(`Processing message ${message.attributes.uid}...`);
-            console.debug(message);
             const parts = imaps.getParts(message.attributes.struct);
             for (const part of parts) {
                 const partData = await connection.getPartData(message, part);
                 if (part.disposition === null && part.encoding !== 'base64') {
-                    console.debug(partData);
                     for (const [_, __, pollId] of partData.matchAll(DOODLE_URL)) {
                         await signUp(pollId);
                     }
@@ -97,14 +96,21 @@ async function interval() {
             }
         });
         connection.end();
+        connection.removeListener('error', connectionError);
+        if (timeoutCount === 10) {
+            await notify('Normal state is restored.');
+        }
+        timeoutCount = 0;
     } catch (error) {
-        await notify('Unhandled error', error);
+        if (error instanceof imaps.errors.ConnectionTimeoutError) {
+            if (++timeoutCount === 10) {
+                await notify('The timeout count reached 10, will notify when normal state is restored.', error);
+            }
+        } else {
+            await notify('Unhandled error', error);
+        }
     }
 }
 
-async function main() {
-    setInterval(interval, intervalMs);
-    await notify('Service started.')
-}
-
-main();
+setInterval(interval, config.intervalMs);
+await notify('Service started.')
