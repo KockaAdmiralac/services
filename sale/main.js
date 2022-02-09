@@ -118,29 +118,33 @@ function combine(reservations) {
 
 async function recheck(first) {
     try {
-        const embeds = [];
-        for (const reservation of combine(await getAllReserved())) {
+        const separateReservations = [];
+        // Filter out already recorded terms.
+        for (const reservation of await getAllReserved()) {
             const serialized = serialize(reservation);
             if (!reservations.has(serialized)) {
                 reservations.add(serialized);
-                const {author, name, terms} = reservation;
-                embeds.push({
-                    author: {
-                        name: author || 'Unknown author'
-                    },
-                    description: terms
-                        .map(({room, start, end}) => `• room ${room}: <t:${start}:f> - <t:${end}:f>`)
-                        .join('\n')
-                        .slice(0, 2000),
-                    title: name || 'Untitled'
-                });
+                separateReservations.push(reservation);
             }
         }
+        // Combine reservations into embeds.
+        const embeds = combine(separateReservations).map(({author, name, terms}) => ({
+            author: {
+                name: author || 'Unknown author'
+            },
+            description: terms
+                .map(({room, start, end}) => `• room ${room}: <t:${start}:f> - <t:${end}:f>`)
+                .join('\n')
+                .slice(0, 2000),
+            title: name || 'Untitled'
+        }))
+        // Save cache.
         if (embeds.length) {
             await writeFile('cache.json', JSON.stringify(Array.from(reservations)), {
                 encoding: 'utf-8'
             });
         }
+        // Relay all embeds, 10 by 10.
         while (embeds.length && !first) {
             await webhook.send({
                 embeds: embeds.splice(0, 10)
