@@ -9,65 +9,66 @@
 /**
  * Importing modules.
  */
-const fs = require('fs'),
-      {WebhookClient} = require('discord.js'),
-      got = require('got'),
-      {parse} = require('node-html-parser'),
-      {CookieJar} = require('tough-cookie'),
-      {etf, interval, relays, notifications} = require('./config.json');
+import {readFile, writeFile} from 'fs/promises';
+
+import {WebhookClient} from 'discord.js';
+import {parse} from 'node-html-parser';
+import {CookieJar} from 'tough-cookie';
+import config from './config.json' assert {type: 'json'}
+import {promisify} from 'util';
+import ETFClient from '../etf-proxy/client.js';
 
 /**
  * Globals.
  */
-const http = got.extend({
+const http = new ETFClient({
     cookieJar: new CookieJar(),
     headers: {
         'User-Agent': 'ETF auto-lab client'
     },
     method: 'GET',
     prefixUrl: 'https://rti.etf.bg.ac.rs/',
-    resolveBodyOnly: true,
-    retry: 0
-}), serviceWebhook = notifications ? new WebhookClient(notifications) : null,
-    typeNameMap = {
-        domaci: 'homework',
-        labvezbe: 'lab'
-    },
-    relayList = relays.map(config => ({
-        autoSignup: config.autoSignup,
-        regex: new RegExp(config.regex, 'u'),
-        type: config.type,
-        webhook: new WebhookClient({
-            id: config.id,
-            token: config.token
-        })
-    }));
+    resolveBodyOnly: true
+});
+const serviceWebhook = config.notifications ? new WebhookClient(config.notifications) : null;
+const typeNameMap = {
+    domaci: 'homework',
+    labvezbe: 'lab'
+};
+const relayList = config.relays.map(config => ({
+    autoSignup: config.autoSignup,
+    regex: new RegExp(config.regex, 'u'),
+    type: config.type,
+    webhook: new WebhookClient({
+        id: config.id,
+        token: config.token
+    })
+}));
+const wait = promisify(setTimeout);
 let cache = null;
 
 /**
  * Refreshes the lab service list.
  */
 async function getServices() {
-    const html = await http('labvezbe/'),
-          tree = parse(html);
-    return tree.querySelectorAll('ol.rounded-list li a')
-        .map(node => ({
-            name: node.rawText.trim(),
-            type: 'labvezbe'
-        }));
+    const html = await http.get('labvezbe/');
+    const tree = parse(html);
+    return tree.querySelectorAll('ol.rounded-list li a').map(node => ({
+        name: node.rawText.trim(),
+        type: 'labvezbe'
+    }));
 }
 
 /**
  * Refreshes the homework list.
  */
 async function getHomeworks() {
-    const html = await http('domaci'),
-          tree = parse(html);
-    return tree.querySelectorAll('a')
-        .map(node => ({
-            name: node.rawText.trim(),
-            type: 'domaci'
-        }));
+    const html = await http.get('domaci');
+    const tree = parse(html);
+    return tree.querySelectorAll('a').map(node => ({
+        name: node.rawText.trim(),
+        type: 'domaci'
+    }));
 }
 
 /**
@@ -76,8 +77,8 @@ async function getHomeworks() {
 async function login() {
     const response = await http.post('labvezbe/loz.php', {
         form: {
-            sifra: etf.password,
-            username: etf.username
+            sifra: config.etf.password,
+            username: config.etf.username
         }
     });
     if (response.includes('Morate dati ispravne login podatke!')) {
@@ -90,7 +91,7 @@ async function login() {
  * @param {string} service Service to check for availability
  */
 async function getTerms(service) {
-    const html = await http('labvezbe', {
+    const html = await http.get('labvezbe', {
         searchParams: {
             servis: service
         }
@@ -118,7 +119,7 @@ async function getTerms(service) {
  * @param {number} term Term ID to sign up for
  */
 async function signup(service, term) {
-    const response = await http('labvezbe/addUserToTermin.php', {
+    const response = await http.get('labvezbe/addUserToTermin.php', {
         searchParams: {
             servis: service,
             terminID: term
@@ -133,7 +134,7 @@ async function signup(service, term) {
  * Saves the service cache.
  */
 async function saveCache() {
-    await fs.promises.writeFile('cache.json', JSON.stringify(Array.from(cache)));
+    await writeFile('cache.json', JSON.stringify(Array.from(cache)));
 }
 
 /**
@@ -218,30 +219,25 @@ async function refresh() {
     }
 }
 
-/**
- * Entry point.
- */
-async function main() {
-    try {
-        cache = new Set(JSON.parse(await fs.promises.readFile('cache.json', {
-            encoding: 'utf-8'
-        })));
-    } catch (error) {
-        if (error && error.code === 'ENOENT') {
-            console.info('Cache not found, initializing anew.');
-            cache = new Set(
-                (await getServices())
-                    .concat(await getHomeworks())
-                    .map(({type, name}) => `${type}:${name}`)
-            );
-            await saveCache();
-        } else {
-            console.error('Error while loading cache:', error);
-        }
+try {
+    cache = new Set(JSON.parse(await readFile('cache.json', {
+        encoding: 'utf-8'
+    })));
+} catch (error) {
+    if (error && error.code === 'ENOENT') {
+        console.info('Cache not found, initializing anew.');
+        cache = new Set(
+            (await getServices())
+                .concat(await getHomeworks())
+                .map(({type, name}) => `${type}:${name}`)
+        );
+        await saveCache();
+    } else {
+        console.error('Error while loading cache:', error);
     }
-    await refresh();
-    setInterval(refresh, interval);
-    await notify('Service started.');
 }
-
-main();
+await notify('Service started.');
+while (true) {
+    await refresh();
+    await wait(config.interval);
+}
