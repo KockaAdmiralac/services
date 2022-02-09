@@ -1,21 +1,23 @@
 #!/usr/bin/env node
-import got from 'got';
 import {WebhookClient} from 'discord.js';
 import {readFile, writeFile} from 'fs/promises';
+import ETFClient from '../etf-proxy/client.js';
+import {promisify} from 'util';
 
-let webhook, reservations, interval;
+let webhook, reservations, running = true;
 
-const http = got.extend({
+const http = new ETFClient({
     headers: {
         'User-Agent': 'Proveravanje rezervisanih sala'
     },
     prefixUrl: 'https://rti.etf.bg.ac.rs/sale/',
-    resolveBodyOnly: true,
-    retry: 0
-}), LINE_REGEX = /<tr class="tablica(?:0|1|Vikend|Danas).*/g,
-TERM_REGEX = /class='zauzete' id='[^']*'><center>([^<]+)/g,
-ROOMS = ['25', '26', '60', '26B', '70', '314', '315'],
-INTERVAL = 60 * 60 * 1000;
+    resolveBodyOnly: true
+});
+const LINE_REGEX = /<tr class="tablica(?:0|1|Vikend|Danas).*/g;
+const TERM_REGEX = /class='zauzete' id='[^']*'><center>([^<]+)/g;
+const ROOMS = ['25', '26', '60', '26B', '70', '314', '315'];
+const INTERVAL = 60 * 60 * 1000;
+const wait = promisify(setTimeout);
 
 function serialize({author, day, month, name, room, time, year}) {
     return `${author}:${day}:${month}:${name}:${room}:${time}:${year}`;
@@ -123,28 +125,17 @@ async function recheck(first) {
     }
 }
 
-async function main() {
-    const config = await readJSON('config.json');
-    if (!config) {
-        console.error('No configuration present, exiting.');
-        return;
-    }
-    const {id, token} = config;
-    webhook = new WebhookClient({id, token});
-    reservations = new Set(await readJSON('cache.json') || []);
-    interval = setInterval(recheck, INTERVAL);
-    await report('Service started.');
-    await recheck(true);
+const config = await readJSON('config.json');
+if (!config) {
+    console.error('No configuration present, exiting.');
+    process.exit(1);
 }
-
-async function kill() {
-    if (interval) {
-        clearInterval(interval);
-    }
-    if (webhook) {
-        webhook.destroy();
-    }
+const {id, token} = config;
+webhook = new WebhookClient({id, token});
+reservations = new Set(await readJSON('cache.json') || []);
+await recheck(reservations.length === 0);
+await report('Service started.');
+while (running) {
+    await wait(INTERVAL);
+    await recheck();
 }
-
-main();
-process.on('SIGINT', kill);
