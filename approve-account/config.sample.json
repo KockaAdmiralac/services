@@ -1,0 +1,19 @@
+{
+    "mediawiki": {
+        "username": "Your MediaWiki username",
+        "password": "Your MediaWiki password",
+        "url": "URL to your MediaWiki instance",
+        "script": "Value of the $wgScriptPath configuration variable"
+    },
+    "db": {
+        "database": "Your MediaWiki database",
+        "username": "Username of the database user",
+        "password": "Password of the database user"
+    },
+    "discord": {
+        "id": "Discord webhook ID for reporting progress",
+        "token": "Discord webhook token for reporting progress"
+    },
+    "suffix": "student.etf.bg.ac.rs",
+    "interval": 30000
+}
