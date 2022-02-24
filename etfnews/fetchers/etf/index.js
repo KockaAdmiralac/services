@@ -44,12 +44,12 @@ export default class ETFFetcher extends Fetcher {
         try {
             const t = Date.now();
             const pad = num => String(num).padStart(2, 0);
+            const d = this.cache;
             const searchParams = {
                 ...this.queryParams(url),
                 t,
                 'q[objavljeno_od]': `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
             };
-            const d = this.cache;
             const response = (await this._client.get(url, {searchParams}))
                 .match(NEWS_HTML_FILTER)[1]
                 .replace(/\\\//g, '/')
