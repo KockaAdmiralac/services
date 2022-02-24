@@ -102,7 +102,7 @@ async function interval() {
         }
         timeoutCount = 0;
     } catch (error) {
-        if (error instanceof imaps.errors.ConnectionTimeoutError) {
+        if (error instanceof imaps.errors.ConnectionTimeoutError || error.source === 'timeout') {
             if (++timeoutCount === 10) {
                 await notify('The timeout count reached 10, will notify when normal state is restored.', error);
             }
