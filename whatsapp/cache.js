@@ -9,7 +9,7 @@
  * Importing modules.
  */
 const {EventEmitter} = require('events'),
-      fs = require('fs').promises;
+      {writeFile} = require('fs/promises');
 
 /**
  * Caches Discord <-> WhatsApp message ID mapping, as well as old credentials
@@ -23,8 +23,6 @@ class Cache extends EventEmitter {
         super();
         try {
             const cache = require('./cache.json');
-            this.credentials = cache._session;
-            delete cache._session;
             Object.freeze(this.credentials);
             const entries = Object.entries(cache);
             this.whatsAppToDiscord = new Map(entries);
@@ -39,21 +37,6 @@ class Cache extends EventEmitter {
         }
         this.interval = setInterval(this.save.bind(this), 5000);
         this.changed = false;
-    }
-    /**
-     * Gets WhatsApp Web credentials of the current user.
-     */
-    get session() {
-        return this.credentials;
-    }
-    /**
-     * Sets WhatsApp Web credentials of the current user.
-     * @param {object} session WhatsApp Web session information.
-     */
-    set session(session) {
-        this.changed = session !== this.credentials;
-        this.credentials = session;
-        Object.freeze(this.credentials);
     }
     /**
      * Connects a WhatsApp message to a Discord message.
@@ -90,8 +73,7 @@ class Cache extends EventEmitter {
         }
         try {
             const cache = Object.fromEntries(this.whatsAppToDiscord);
-            cache._session = this.credentials;
-            await fs.writeFile('cache.json', JSON.stringify(cache));
+            await writeFile('cache.json', JSON.stringify(cache));
             this.changed = false;
         } catch (error) {
             this.emit('error', error);

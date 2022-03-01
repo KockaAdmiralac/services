@@ -8,15 +8,21 @@
 /**
  * Importing modules.
  */
-const fs = require('fs'),
+const {rename, writeFile} = require('fs/promises'),
       {WebhookClient} = require('discord.js'),
       FileType = require('file-type'),
-      {Client} = require('whatsapp-web.js'),
+      {hostname} = require('os'),
+      {Client, LocalAuth} = require('whatsapp-web.js'),
       qrcode = require('qrcode-terminal'),
-      queue = require('queue'),
+      PQueue = require('p-queue').default,
       Cache = require('./cache.js'),
       Group = require('./group.js'),
-      util = require('./util.js'),
+      {
+          discordToWhatsApp,
+          formatUsername,
+          safeAsync,
+          trimMessage
+      } = require('./util.js'),
       Twinkle = require('../util/twinkle.js'),
       SIBaza = require('../util/si-db.js'),
       config = require('./config.json');
@@ -55,8 +61,7 @@ class WhatsAppDiscord {
         if (config.si) {
             this.db = new SIBaza(config.si);
         }
-        this.queue = queue({
-            autostart: true,
+        this.queue = new PQueue({
             concurrency: 1
         });
         this.initWebhooks();
@@ -129,9 +134,9 @@ class WhatsAppDiscord {
         ) {
             return;
         }
-        const chat = await this.client.getChatById(group.id),
-              mentioned = [],
-              mentionMap = {};
+        const chat = await this.client.getChatById(group.id);
+        const mentioned = [];
+        const mentionMap = {};
         for (const userId of mentions.users) {
             const student = await this.db.getStudentByDiscordID(userId);
             if (!student) {
@@ -148,7 +153,7 @@ class WhatsAppDiscord {
                 }
             }
         }
-        const content = util.discordToWhatsApp(
+        const content = discordToWhatsApp(
             message,
             member,
             attachments,
@@ -176,7 +181,10 @@ class WhatsAppDiscord {
      */
     initClient() {
         this.client = new Client({
-            session: this.cache.session
+            authStrategy: new LocalAuth({
+                clientId: `whatsapp-service-${hostname()}`,
+                dataPath: 'session'
+            })
         });
         for (const event of EVENTS) {
             this.client.on(event, this[
@@ -192,8 +200,7 @@ class WhatsAppDiscord {
     async authFailure(message) {
         await this.report(`AUTHENTICATION FAILURE: ${message}`);
         // Clear authentication data.
-        this.cache.session = null;
-        await this.cache.save();
+        await rename('session', `old-session-${Date.now()}`);
         // Restart client.
         await this.report('Destroying client...');
         this.isReady = false;
@@ -203,11 +210,9 @@ class WhatsAppDiscord {
     }
     /**
      * Emitted when authentication is successful.
-     * @param {object} session Object containing session information.
      */
-    async authenticated(session) {
+    async authenticated() {
         await this.report('Authenticated to WhatsApp.');
-        this.cache.session = session;
     }
     /**
      * Emitted when the battery percentage for the attached device changes.
@@ -268,6 +273,9 @@ class WhatsAppDiscord {
         switch (reason) {
             case 'UNPAIRED':
                 await this.report('Another device has paired.');
+                break;
+            case 'NAVIGATION':
+                await this.report('Device disconnected from application.');
                 break;
             default:
                 await this.report(`DISCONNECTED: ${reason}`);
@@ -344,7 +352,7 @@ class WhatsAppDiscord {
             if (group.id && message.from !== group.id) {
                 continue;
             }
-            this.queue.push(util.safeAsync(
+            this.queue.add(() => safeAsync(
                 () => this.process(message, group),
                 error => this.report('Error while relaying message', error)
             ));
@@ -357,20 +365,30 @@ class WhatsAppDiscord {
      * @param {Group} group Group to which the message was sent
      */
     async process(message, group) {
-        const contact = await message.getContact(),
-              options = {
+        const contact = await message.getContact();
+        let avatarURL = null;
+        try {
+            avatarURL = await contact.getProfilePicUrl();
+        } catch (error) {
+            // This is a common whatsapp-web.js error right now, just log it.
+            console.error(new Date(), 'Error while obtaining profile picture.');
+        }
+        const {pushname, number} = contact;
+        if (!number) {
+            // What.
+            await this.report('Contact does not have a number.');
+            console.debug(contact);
+            return;
+        }
+        const user = this.db ?
+            await this.db.getStudentByPhone(number) :
+            null;
+        const options = {
             allowedMentions: {
                 parse: ['users']
             },
-            avatarURL: await contact.getProfilePicUrl(),
-            username: util.formatUsername(
-                contact.pushname,
-                contact.number,
-                group.callNumber,
-                this.db ?
-                    await this.db.getStudentByPhone(contact.number) :
-                    null
-            )
+            avatarURL,
+            username: formatUsername(pushname, number, group.callNumber, user)
         };
         if (message.hasQuotedMsg) {
             await this.handleQuotedMessage(message, group, options);
@@ -390,22 +408,20 @@ class WhatsAppDiscord {
      * @param {object} options Discord webhook options
      */
     async handleQuotedMessage(message, group, options) {
-        const quoted = await message.getQuotedMessage(),
-              quotedContact = await quoted.getContact(),
-              msg = await group.send('', {
+        const quoted = await message.getQuotedMessage();
+        const {number, pushname} = await quoted.getContact();
+        const student = this.db ?
+            await this.db.getStudentByPhone(number) :
+            null;
+        const description = await this.getQuotedMessageContents(quoted, group);
+        const title = number === config.number ?
+            'You' :
+            formatUsername(pushname, number, group.callNumber, student);
+        const msg = await group.send('', {
             ...options,
             embeds: [{
-                description: await this.getQuotedMessageContents(quoted, group),
-                title: quotedContact.number === config.number ?
-                    'You' :
-                    util.formatUsername(
-                        quotedContact.pushname,
-                        quotedContact.number,
-                        group.callNumber,
-                        this.db ? await this.db.getStudentByPhone(
-                            quotedContact.number
-                        ) : null
-                    )
+                description,
+                title
             }]
         });
         this.cache.add(message.id._serialized, msg.id);
@@ -428,8 +444,8 @@ class WhatsAppDiscord {
         if (!media) {
             return;
         }
-        const buffer = Buffer.from(media.data, 'base64'),
-              type = await FileType.fromBuffer(buffer);
+        const buffer = Buffer.from(media.data, 'base64');
+        const type = await FileType.fromBuffer(buffer);
         options.files = [{
             attachment: buffer,
             name: media.filename ?
@@ -594,7 +610,7 @@ class WhatsAppDiscord {
                 }
             }
         }
-        return util.trimMessage(content.replace(
+        return trimMessage(content.replace(
             /@(\d+)/g,
             (full, match) => (students[match] ?
                 `<@${students[match].discordID}>` :
@@ -663,7 +679,7 @@ class WhatsAppDiscord {
     async dumpChats() {
         try {
             const chats = await this.client.getChats();
-            await fs.promises.writeFile(
+            await writeFile(
                 'monitoring.txt',
                 `Active chats:\n${chats.map(chat => `- ${chat.name}`).join('\n')}`
             );
