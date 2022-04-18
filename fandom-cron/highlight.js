@@ -5,7 +5,7 @@ import parser from 'node-html-parser';
 import {dirname} from 'path';
 import {CookieJar} from 'tough-cookie';
 import {fileURLToPath} from 'url';
-import {loginAllDomains, getContent, getEditToken, readJSON} from './util.js';
+import {login, getContent, getEditToken, readJSON} from './util.js';
 
 const http = got.extend({
     cookieJar: new CookieJar(),
@@ -99,7 +99,7 @@ async function init() {
     console.info('Started.');
     const {username, password} = await readJSON(`${dirname(fileURLToPath(import.meta.url))}/highlight.json`);
     console.info('Logging in...');
-    await loginAllDomains(username, password, http);
+    await login(username, password, http);
     console.info('Grabbing config and CSS contents...');
     const [highlight, configContents] = await getContent('dev.fandom.com', [
         'MediaWiki:Highlight.css',

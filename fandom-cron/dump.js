@@ -4,7 +4,7 @@ import got from 'got';
 import {dirname} from 'path';
 import {CookieJar} from 'tough-cookie';
 import {fileURLToPath} from 'url';
-import {loginAllDomains, getEditToken, readJSON} from './util.js';
+import {login, getEditToken, readJSON} from './util.js';
 
 const http = got.extend({
     cookieJar: new CookieJar(),
@@ -31,7 +31,7 @@ async function init() {
     const {username, password, wikis} = await readJSON(`${dirname(fileURLToPath(import.meta.url))}/dump.json`);
     console.info('Logging in...');
     try {
-        await loginAllDomains(username, password, http);
+        await login(username, password, http);
     } catch (error) {
         console.error('An error occurred while logging in:', error);
         return;

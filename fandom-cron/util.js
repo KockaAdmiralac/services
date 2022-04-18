@@ -1,22 +1,16 @@
 import {readFile} from 'fs/promises';
 
-export async function login(username, password, http, domain) {
-    return http.post(`https://services.${domain}/auth/token`, {
+export async function login(username, password, http) {
+    return http.post(`https://services.fandom.com/mobile-fandom-app/fandom-auth/login`, {
         form: {
             username,
             password
         },
         headers: {
+            'X-Fandom-Auth': 1,
             'X-Wikia-WikiaAppsId': 1234
         }
     });
-}
-
-export function loginAllDomains(username, password, http) {
-    return Promise.all([
-        login(username, password, http, 'fandom.com'),
-        login(username, password, http, 'wikia.org')
-    ]);
 }
 
 export async function getEditToken(url, http) {
