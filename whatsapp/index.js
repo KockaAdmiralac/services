@@ -128,9 +128,9 @@ class WhatsAppDiscord {
     }) {
         if (
             Date.now() - message.createdTimestamp > 5000 ||
-            message.channelID !== group.channelId ||
+            message.channelId !== group.channelId ||
             !this.isReady ||
-            message.webhookID
+            message.webhookId
         ) {
             return;
         }
@@ -161,7 +161,7 @@ class WhatsAppDiscord {
         );
         let quotedMessageId = null;
         if (reference) {
-            quotedMessageId = this.cache.getWhatsApp(reference.messageID);
+            quotedMessageId = this.cache.getWhatsApp(reference.messageId);
         }
         const sentMessage = await chat.sendMessage(content, {
             mentions: mentioned,
