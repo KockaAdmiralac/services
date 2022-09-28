@@ -23,8 +23,8 @@
         "directory": "doodle"
     },
     "dependencies": {
-        "discord.js": "13.6.0",
-        "got": "12.0.1",
+        "discord.js": "14.5.0",
+        "got": "12.5.1",
         "imap-simple": "5.1.0"
     },
     "engines": {
