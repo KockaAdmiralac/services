@@ -20,8 +20,8 @@
         "url": "https://github.com/KockaAdmiralac/services.git"
     },
     "dependencies": {
-        "got": "12.5.1",
-        "node-html-parser": "6.1.1",
+        "got": "12.5.3",
+        "node-html-parser": "6.1.5",
         "tough-cookie": "4.1.2"
     },
     "type": "module"
