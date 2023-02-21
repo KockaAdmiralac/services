@@ -87,7 +87,7 @@ export default class MoodleFetcher extends Fetcher {
                     return this.fetch(url, true);
                 }
             }
-            return tree.querySelector('.course-content').outerHTML;
+            return tree.querySelector('.course-content, .generalbox').outerHTML;
         } catch (error) {
             // TODO: Add handling of specific request errors here.
             throw error;
