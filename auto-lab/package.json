@@ -21,8 +21,8 @@
         "directory": "auto-lab"
     },
     "dependencies": {
-        "discord.js": "14.5.0",
-        "node-html-parser": "6.1.1",
+        "discord.js": "14.7.1",
+        "node-html-parser": "6.1.5",
         "tough-cookie": "4.1.2"
     },
     "engines": {
