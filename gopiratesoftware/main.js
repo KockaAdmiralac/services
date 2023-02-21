@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 'use strict';
 
-import parser from 'body-parser';
 import express from 'express';
 import {readFile} from 'fs/promises';
 import got from 'got';
@@ -123,8 +122,8 @@ async function main() {
     await check();
     interval = setInterval(check, config.interval);
     const app = express();
-    app.use(parser.json());
-    app.use(parser.urlencoded({
+    app.use(express.json());
+    app.use(express.urlencoded({
         extended: true
     }));
     app.get('/', request);
