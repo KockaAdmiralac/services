@@ -135,7 +135,9 @@ class VerifyCommand extends Command {
         if (!discordTag) {
             return this.verificationStep(message, `The user ${username} does not have their username set in their profile masthead. Please set it [here](<${verificationLink}>) and re-run this command.`);
         }
-        if (discordTag.trim() !== message.author.tag) {
+        const oldStyleUsername = message.author.tag === discordTag;
+        const newStyleUsername = message.author.username === discordTag && message.author.discriminator?.length !== 4;
+        if (!oldStyleUsername && !newStyleUsername) {
             return this.verificationStep(message, `The username and tag in the masthead do not match the username and tag of the message author. Click [here](<${verificationLink}>) to remedy this.`);
         }
 
