@@ -1,0 +1,45 @@
+{
+    "name": "discord-aad",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Connecting Discord and Azure Active Directory accounts using Cloudflare Workers.",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/KockaAdmiralac/services.git",
+        "directory": "discord-aad"
+    },
+    "keywords": [
+        "discord",
+        "azure-active-directory",
+        "aad",
+        "cloudflare-workers",
+        "workers"
+    ],
+    "author": {
+        "name": "Luka Simić",
+        "email": "git@kocka.tech",
+        "url": "https://kocka.tech"
+    },
+    "license": "MIT",
+    "scripts": {
+        "deploy": "wrangler deploy",
+        "start": "wrangler dev"
+    },
+    "dependencies": {
+        "cookie": "0.5.0"
+    },
+    "devDependencies": {
+        "@cloudflare/workers-types": "4.20230628.0",
+        "@types/cookie": "0.5.1",
+        "@typescript-eslint/eslint-plugin": "5.61.0",
+        "@typescript-eslint/parser": "5.61.0",
+        "eslint": "8.44.0",
+        "eslint-plugin-jsdoc": "46.4.3",
+        "eslint-plugin-promise": "6.1.1",
+        "typescript": "5.1.6",
+        "wrangler": "3.1.2"
+    },
+    "engines": {
+        "node": ">=16"
+    }
+}

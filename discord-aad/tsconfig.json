@@ -1,0 +1,54 @@
+{
+    "compilerOptions": {
+        "allowUmdGlobalAccess": false,
+        "allowUnreachableCode": false,
+        "allowUnusedLabels": false,
+        "allowJs": false,
+        "alwaysStrict": true,
+        "baseUrl": "./",
+        "disableSizeLimit": false,
+        // For now.
+        "downlevelIteration": false,
+        "esModuleInterop": true,
+        // Let's not enforce this just yet.
+        "exactOptionalPropertyTypes": false,
+        "forceConsistentCasingInFileNames": true,
+        // For now.
+        "importHelpers": false,
+        // This may cause issues with core-js?
+        "importsNotUsedAsValues": "remove",
+        "inlineSourceMap": false,
+        "inlineSources": false,
+        "moduleResolution": "NodeNext",
+        "newLine": "lf",
+        "noEmitOnError": true,
+        "noErrorTruncation": true,
+        // This does not allow you to disable the warning using a "falls through" comment like ESLint (or even GCC) do.
+        "noFallthroughCasesInSwitch": false,
+        "noImplicitAny": true,
+        "noImplicitOverride": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "noResolve": false,
+        "noUncheckedIndexedAccess": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "dist",
+        "paths": {},
+        "preserveSymlinks": true,
+        "removeComments": false,
+        "resolveJsonModule": true,
+        "rootDir": ".",
+        "sourceMap": true,
+        "strict": true,
+        "strictBindCallApply": true,
+        "strictFunctionTypes": true,
+        "strictNullChecks": true,
+        "strictPropertyInitialization": true,
+        "stripInternal": false,
+        "target": "ESNext",
+        "types": ["@cloudflare/workers-types"],
+        "useUnknownInCatchVariables": true
+    }
+}
