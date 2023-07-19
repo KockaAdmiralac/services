@@ -13,7 +13,9 @@ const http = got.extend({
         'User-Agent': 'Highlight.css updater'
     },
     resolveBodyOnly: true,
-    retry: 0
+    retry: {
+        limit: 0
+    }
 });
 
 async function getUsers({groups, overrides}) {
@@ -114,7 +116,9 @@ async function init() {
         .join('\n\n');
     const text = highlight.replace(/(\/\* HighlightUpdate-start \*\/\n)[\s\S]*$/igm, (_, m) => `${m}${css}`);
     console.info('Saving page...');
-    await edit(text, await getEditToken('dev.fandom.com', http));
+    const editToken = await getEditToken('dev.fandom.com', http);
+    console.debug(editToken);
+    await edit(text, editToken);
     console.info('Done.');
 }
 

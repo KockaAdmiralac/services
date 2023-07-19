@@ -9,4 +9,4 @@ github/cache.json
 **/config.json
 **/node_modules
 **/*.log
-*.vars
+*.cookies
