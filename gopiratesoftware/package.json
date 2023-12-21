@@ -24,7 +24,7 @@
     },
     "dependencies": {
         "express": "4.18.2",
-        "got": "12.5.3"
+        "got": "12.x"
     },
     "devDependencies": {
         "eslint": "8.34.0"
