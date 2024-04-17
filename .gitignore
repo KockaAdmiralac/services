@@ -1,10 +1,6 @@
-etfnews/hist
-etfnews/main.pid
 fandom-cron/dump.json
 fandom-cron/highlight.json
 fandom-cron/main.log
-gopiratesoftware/keys
-github/cache.json
 **/cache.json
 **/config.json
 **/node_modules
