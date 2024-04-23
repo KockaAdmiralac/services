@@ -23,6 +23,6 @@
         "@discordjs/builders": "1.7.0",
         "discord.js": "14.14.1",
         "got": "11.x",
-        "mysql2": "3.6.5"
+        "mysql2": "3.9.7"
     }
 }
