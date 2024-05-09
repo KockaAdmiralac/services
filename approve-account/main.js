@@ -30,7 +30,7 @@ const QUERY = 'SELECT `acr_email`, `acr_id`, `acr_name`, `acr_real_name` FROM `a
     'WHERE `acr_email_authenticated` IS NOT NULL AND ' +
     '`acr_deleted` = 0 AND ' +
     '`acr_email` LIKE ? AND ' +
-    'NOT EXISTS (SELECT `user_id` FROM `user` WHERE `acr_email` = `user_email`)';
+    'NOT EXISTS (SELECT `acd_user_id` FROM `account_credentials` WHERE `acr_email` = `acd_email`)';
 
 /**
  * Global variables.
