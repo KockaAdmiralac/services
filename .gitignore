@@ -1,8 +1,12 @@
+.venv
+__pycache__
 fandom-cron/dump.json
 fandom-cron/highlight.json
 fandom-cron/main.log
 **/cache.json
 **/config.json
+**/config.ini
 **/node_modules
 **/*.log
 *.cookies
+*.db
