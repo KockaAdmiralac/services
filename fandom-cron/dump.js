@@ -56,6 +56,7 @@ async function init() {
             console.error('Please log in through a terminal!');
             exit(1);
         }
+        await cookieJar.removeAllCookies();
         console.info('Logging in...');
         const totp = await question('TOTP code: ');
         try {
