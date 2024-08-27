@@ -1,0 +1,29 @@
+name: Dump all wiki databases
+
+on:
+  schedule:
+    - cron: '43 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        working-directory: ./fandom-cron
+        run: npm install
+      - name: Set configuration
+        working-directory: ./fandom-cron
+        run: echo '${{ secrets.DUMP_CONFIG }}' > dump.json
+      - name: Set cookies
+        working-directory: ./fandom-cron
+        run: echo '${{ secrets.DUMP_COOKIES }}' > fandom.cookies
+      - name: Dump the databases
+        working-directory: ./fandom-cron
+        run: node dump.js
