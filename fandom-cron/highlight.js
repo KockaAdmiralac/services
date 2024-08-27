@@ -117,7 +117,6 @@ async function init() {
     const text = highlight.replace(/(\/\* HighlightUpdate-start \*\/\n)[\s\S]*$/igm, (_, m) => `${m}${css}`);
     console.info('Saving page...');
     const editToken = await getEditToken('dev.fandom.com', http);
-    console.debug(editToken);
     await edit(text, editToken);
     console.info('Done.');
 }
