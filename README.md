@@ -14,3 +14,8 @@ These are services which I previously used, and they can be found at my [archive
 - [Logging GitHub pull requests to Discord](https://github.com/KockaAdmiralac/Archive/tree/master/fandom/github)
 
 I do not plan to maintain these further, but you can contact me if you'd like to continue their maintenance.
+
+## Moved services
+These services have been moved out of this repository, due to having a better place someplace else:
+
+- [Relay of Reddit moderator queue posts to Discord](https://github.com/KockaAdmiralac/reddit-queue)
