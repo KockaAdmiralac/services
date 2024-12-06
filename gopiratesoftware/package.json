@@ -23,7 +23,7 @@
         "url": "https://github.com/KockaAdmiralac/services.git"
     },
     "dependencies": {
-        "express": "4.19.2",
+        "express": "4.21.2",
         "got": "12.x"
     },
     "devDependencies": {
