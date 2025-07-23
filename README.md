@@ -12,6 +12,7 @@ These are services which I previously used, and they can be found at my [archive
 - [(A pretty bad) proxy to ETF pages](https://github.com/KockaAdmiralac/Archive/tree/master/etf-proxy)
 - [Logging Discourse staff log to Discord](https://github.com/KockaAdmiralac/Archive/tree/master/petlja/algora-staff-log)
 - [Logging GitHub pull requests to Discord](https://github.com/KockaAdmiralac/Archive/tree/master/fandom/github)
+- [Web service serving current stream data for a single streamer](https://github.com/KockaAdmiralac/Archive/tree/master/fandom/gopiratesoftware) (archived 2025-07-23)
 
 I do not plan to maintain these further, but you can contact me if you'd like to continue their maintenance.
 

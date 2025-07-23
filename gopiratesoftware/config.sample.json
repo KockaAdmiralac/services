@@ -1,7 +1,0 @@
-{
-    "client": "Your Client ID goes here",
-    "secret": "Your client secret goes here",
-    "user": "gopiratesoftware",
-    "port": 53730,
-    "interval": 300000
-}
